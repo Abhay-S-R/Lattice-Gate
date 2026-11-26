@@ -13,6 +13,7 @@ const { openDb, tx, quarantine, StateError } = require('../store/db.cjs');
 const schema = require('../store/schema-adapter.cjs');
 const audit = require('../core/audit.cjs');
 const ids = require('../core/ids.cjs');
+const { authorizeOwnerRead } = require('../core/policy.cjs');
 
 // ---------------------------------------------------------------- shared helpers
 
@@ -93,8 +94,40 @@ async function setup(ctx, req) {
 
 // ---------------------------------------------------------------- read (B, Task 1.9)
 
-async function read(ctx, req) { // eslint-disable-line no-unused-vars
-  throw new Error('not implemented');
+const DENY = Object.freeze({ decision: 'deny' });
+
+/**
+ * Open the store for a read-type op. Returns null when there is no store yet
+ * (nothing created). Other state errors propagate (index.cjs answers deny).
+ * @param {{ stateDir: string }} ctx
+ */
+function openExisting(ctx) {
+  try {
+    return openAdapterDb(ctx.stateDir, false);
+  } catch (e) {
+    if (e instanceof StateError && e.kind === 'missing') return null;
+    throw e;
+  }
+}
+
+/**
+ * Owner read (architecture §5.5). One tx: authorize, record the decision, alerts.
+ * No store or generation 0 (no setup yet) → deny without a write.
+ * @param {{ stateDir: string }} ctx
+ * @param {{ actor: string, asset: string, request_id: string }} req
+ * @returns {Promise<{ decision: 'allow', body: string } | { decision: 'deny' }>}
+ */
+async function read(ctx, req) {
+  const db = openExisting(ctx);
+  if (!db) return { ...DENY };
+  return using(db, () => tx(db, () => {
+    const gen = currentGen(db);
+    if (gen === 0) return { ...DENY };
+    const a = authorizeOwnerRead(db, req.actor, req.asset);
+    const ev = { gen, kind: 'access', op: 'read', request_id: req.request_id, actor: req.actor, asset: req.asset };
+    audit.append(db, { ...ev, decision: a.decision, rule: a.rule });
+    return a.decision === 'allow' ? { decision: 'allow', body: a.body } : { ...DENY };
+  }));
 }
 
 // ---------------------------------------------------------------- revoke (A, Task 1.10)

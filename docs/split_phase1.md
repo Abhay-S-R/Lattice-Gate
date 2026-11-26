@@ -19,17 +19,17 @@ This splits **Phase 1 (Round 1 adapter)** of `docs/implementation-plan.md` betwe
   | `npm run validate` | Toolkit `validate.py` against the root adapter |
   | `npm run judge -- <command>` | Runs `<command>` inside the x86-64 judging replica, for example `npm run judge -- npm test` |
 
-- **A judge run is native on x86-64 machines** (the judging platform), so it is about as fast as a normal run. Still run it **before opening a PR**. For the inner loop, use `node --test <file>`.
+- **A judge run is native on x86-64 machines** (the judging platform), so it is about as fast as a normal run. Still run it **before merging**. For the inner loop, use `node --test <file>`.
 
 ---
 
 ## 2. Branching and merging
 
 - Integration branch: `phase-1-adapter`, cut from `main`. Nothing goes to `main` until Gate 1 passes (Task 1.17).
-- Each developer works on short task branches off `phase-1-adapter`, such as `p1/a-ids-encoder` or `p1/b-validate`, and opens a PR **into `phase-1-adapter`**.
+- Each developer works on short task branches off `phase-1-adapter`, such as `p1/a-ids-encoder` or `p1/b-validate`, and merges it **into `phase-1-adapter`** once reviewed.
 - Commit once per task, using the plan's message (for example `feat(core): opaque identifier encoding and limits`).
-- Every PR needs: its task tests green locally, `npm run judge -- npm test` green, and a review from the other developer.
-- **The other developer reviews each PR.** That way both people know both halves before the joint stage.
+- Every merge needs: its task tests green locally, `npm run judge -- npm test` green, and a review from the other developer.
+- **The other developer reviews each change before it merges.** That way both people know both halves before the joint stage.
 
 ---
 
@@ -115,7 +115,7 @@ The split follows ownership. A takes the ops that are mostly **state and persist
                  │
      A: 1.15 concurrency + crash     B: 1.15 negative, 1.16 interop
                  ▼
-          1.17 together → Gate 1 → PR to main → tag round1-ready
+          1.17 together → Gate 1 → merge to main → tag round1-ready
 ```
 
 1. **A does 1.8 first.** Every other op's tests need `setup` to seed state. B can write 1.9 and 1.12 tests in the meantime and run them once 1.8 merges.
@@ -129,8 +129,8 @@ The split follows ownership. A takes the ops that are mostly **state and persist
 Both developers edit this one file during 1.8–1.13. To keep merges clean:
 - A creates the file in 1.8 with one exported function per op, **in this order**: `setup`, `read`, `revoke`, `audit`, `protectedRead`. The ones not yet built are stubs that throw `new Error('not implemented')`. Shared helpers (for example opening the DB for the state dir) go at the top.
 - Each person edits only the body of the functions they own. Do not reorder, reformat or "tidy" the other person's functions.
-- Rebase on `phase-1-adapter` before opening each PR.
-- In 1.13, B adds the `evaluate`/`appendAlerts` calls to **A's** ops too. A reviews that PR specifically for transaction boundaries.
+- Rebase on `phase-1-adapter` before each merge.
+- In 1.13, B adds the `evaluate`/`appendAlerts` calls to **A's** ops too. A reviews that change specifically for transaction boundaries.
 
 ### Hand-offs that need a second look
 
@@ -149,7 +149,7 @@ All run inside `npm run judge -- …` (x86-64 replica), plus green CI:
 - [ ] Interop `25/25` (Task 1.16) (**B**)
 - [ ] Marker scan: `key_material` absent from stdout, stderr and every byte under the state dir, including `-wal` (**A**)
 - [ ] `README.md` and `evidence/round1.md` written and reviewed by both
-- [ ] PR `phase-1-adapter` → `main` approved by both, merged, tagged `round1-ready`
+- [ ] `phase-1-adapter` approved by both, merged into `main`, tagged `round1-ready`
 
 **After Gate 1 the adapter is frozen.** Changes are only for bugs, and each one comes with a regression test.
 

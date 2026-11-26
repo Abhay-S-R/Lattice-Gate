@@ -133,7 +133,7 @@ M4  3.8 `kig bench revocation --n 100 --seed`      3.7 core/wrap.cjs (kemWrap/ke
 
 Rules:
 - Merge to `main` at each M-point once `npm test` and `npm run judge -- npm test` are green (the judge run is native on x86-64, about 1–2 minutes). Small, frequent merges beat one big one.
-- If one side is early, use the time on the other side's **tests**, not their code: A writes 3.6's rejection-rule tests from §8.2; B writes 3.8's "every node denies" test. Reviewing each other's PRs is mandatory, so both understand the whole system before Phase 4 (rotation and crash recovery touch both halves).
+- If one side is early, use the time on the other side's **tests**, not their code: A writes 3.6's rejection-rule tests from §8.2; B writes 3.8's "every node denies" test. Reviewing each other's changes is mandatory, so both understand the whole system before Phase 4 (rotation and crash recovery touch both halves).
 
 ---
 
@@ -141,12 +141,12 @@ Rules:
 
 | File | Rule |
 |---|---|
-| `src/core/contracts.cjs` | Changed only by agreement, in its own small PR |
+| `src/core/contracts.cjs` | Changed only by agreement, in its own small commit |
 | `src/store/schema-*.cjs` | B creates; A edits only inside the `// ---- A: …` sections |
 | `src/cli/main.cjs` | One line per new command module; each developer adds only their own (C8) |
 | `node/server.cjs`, `cp/server.cjs` | A owns; B never edits; B's routes live in B's route modules (C6) |
-| `README.md` | Each developer adds their commands to the Round 2 table in their last PR |
-| `docs/` | No changes to features/architecture without telling the other developer; record decisions in the PR description |
+| `README.md` | Each developer adds their commands to the Round 2 table in their last change |
+| `docs/` | No changes to features/architecture without telling the other developer; record decisions in the commit message |
 
 ---
 

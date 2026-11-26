@@ -46,7 +46,7 @@ See `architecture.md` §1.
 | D, evidence and docs | starts README, evidence sheet and threat model skeleton at Phase 1; owns 7 |
 
 **Working rules:**
-- One branch per phase (`phase-1-adapter`, …), merged by PR after its gate.
+- One branch per phase (`phase-1-adapter`, …), merged into `main` after its gate.
 - Commit after every task: `feat(<area>): …`, `test(<area>): …`, `fix(<area>): …`.
 - Develop inside WSL Ubuntu (Linux paths and permissions match the judging container).
 - Every test file is named `*.test.cjs` and runs with `node --test`.
@@ -685,7 +685,7 @@ After Gate 1 the adapter is frozen.
 - [ ] **Step 1:** README: clean-machine steps (install Node 24.11.1; `git clone`; `node track4_service.cjs < request.json`; `npm test`; how to run the validator). State "no dependencies to install".
 - [ ] **Step 2:** In `evidence/round1.md`, link the validator output, the `npm test` summary from the judge container, interop output, and the CI run URL. List the limits: actor is a trusted input (P0-05), D-14, D-15.
 - [ ] **Step 3:** Run Gate 1 (all four items). Expected: all pass.
-- [ ] **Step 4:** Commit `docs: round 1 evidence`, open the PR, merge, tag `round1-ready`.
+- [ ] **Step 4:** Commit `docs: round 1 evidence`, merge into `main`, tag `round1-ready`.
 
 ---
 

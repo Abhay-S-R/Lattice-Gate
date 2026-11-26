@@ -46,14 +46,17 @@ const detect = {
 const benchDetectCli = require('./bench-detect.cjs');
 const bench = {
   name: 'bench',
-  describe: `benchmarks; 'bench detect': ${benchDetectCli.describe}`,
-  usage: 'usage: node kig.cjs bench detect --seeds <list> --holdout <list> [options]\n       node kig.cjs bench revocation --n 100 --seed <s> [--out <file>] [--json]',
-  options: { ...benchDetectCli.options, n: { type: 'string' }, seed: { type: 'string' } },
-  run: ({ values, positionals }) => {
-    if (positionals.length !== 1) throw new UsageError("expected 'bench detect' or 'bench revocation'");
+  describe: `benchmarks; 'bench detect', 'bench revocation', 'bench perf'`,
+  usage: 'usage: node kig.cjs bench detect --seeds <list> --holdout <list> [options]\n'
+    + '       node kig.cjs bench revocation --n 100 --seed <s> [--out <file>] [--json]\n'
+    + '       node kig.cjs bench perf [--runs <n>] [--seed <n>] [--no-cluster] [--out <file>] [--json]',
+  options: { ...benchDetectCli.options, n: { type: 'string' }, seed: { type: 'string' }, runs: { type: 'string' }, 'no-cluster': { type: 'boolean' } },
+  run: ({ values, positionals, io }) => {
+    if (positionals.length !== 1) throw new UsageError("expected 'bench detect', 'bench revocation' or 'bench perf'");
     if (positionals[0] === 'detect') return benchDetectCli.run(values);
     if (positionals[0] === 'revocation') return require('./bench-revocation.cjs').run(values);
-    throw new UsageError("expected 'bench detect' or 'bench revocation'");
+    if (positionals[0] === 'perf') return require('./bench-perf.cjs').run({ values, io });
+    throw new UsageError("expected 'bench detect', 'bench revocation' or 'bench perf'");
   },
 };
 

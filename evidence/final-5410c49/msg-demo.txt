@@ -1,0 +1,14 @@
+PASS temporary Alice/Bob identities are enrolled and pinned to the signed policy
+PASS tampered M1 and unregistered peer are rejected
+PASS tampered M2 signature transcript and key-confirmation MAC are rejected
+PASS wrong initiator key-confirmation MAC is rejected
+PASS authenticated ephemeral KEM handshake, transcript signatures, and mutual key confirmation
+PASS tampered recipient-device field is rejected
+PASS wrong recipient, altered AAD, and duplicate record are rejected
+PASS transport receipt: 4/4 chunks (2 retries)
+PASS reassembly complete: 1 message
+PASS application delivery: exact message delivered once despite loss, duplication, and reordering
+PASS incomplete message expires; message-size and buffer limits fail closed
+PASS forward secrecy: recorded ciphertext remains unreadable after signing-key exposure and session close
+PASS revoked device cannot establish or continue a session
+Session resumption: NOT SUPPORTED (D-05)

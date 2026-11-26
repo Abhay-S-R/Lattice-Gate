@@ -1,0 +1,136 @@
+{
+  "commit": "nogit",
+  "started_utc": "2026-11-26T23:23:38.515Z",
+  "duration_ms": 38883,
+  "fast": false,
+  "seed": 2026,
+  "pass": true,
+  "passed_steps": 12,
+  "total_steps": 12,
+  "steps": [
+    {
+      "n": 1,
+      "title": "Cluster initialization and startup",
+      "goal": "setup",
+      "status": "PASS",
+      "details": [
+        "CP + nodes A, B, C healthy on loopback base 15713 (A=epoch:1, B=epoch:1, C=epoch:1)"
+      ],
+      "duration_ms": 703
+    },
+    {
+      "n": 2,
+      "title": "Device enrolment and second-factor approval",
+      "goal": "2",
+      "status": "PASS",
+      "details": [
+        "enrolled & activated alice-phone, alice-laptop (peer-device approved), and bob-laptop across A, B, C"
+      ],
+      "duration_ms": 1120
+    },
+    {
+      "n": 3,
+      "title": "Post-quantum file encryption, sharing, and multi-node reads",
+      "goal": "confidentiality",
+      "status": "PASS",
+      "details": [
+        "published \"brief\" (40016 B, 3 chunks), Bob decrypted v1 via A/B/C; 0 plaintext bytes in any DB"
+      ],
+      "duration_ms": 519
+    },
+    {
+      "n": 4,
+      "title": "Versioned key rotation with in-flight grace and hard cutoff",
+      "goal": "1",
+      "status": "PASS",
+      "details": [
+        "in-flight v1 transfer finished under 30 s grace; new v1 requests rejected (old_key_version) on A, B, C; v2 active",
+        "after 30 s grace cutoff: old v1 transfer terminated with grace_expired"
+      ],
+      "duration_ms": 31410
+    },
+    {
+      "n": 5,
+      "title": "Lost device revocation across all service nodes",
+      "goal": "2",
+      "status": "PASS",
+      "details": [
+        "LOST \"alice-phone\": revoked at epoch 13; signed node acks after A 14.7 ms, B 16.1 ms, C 11.3 ms (CP monotonic clock, from the revocation commit)",
+        "alice-phone denied (device_revoked) on A, B, C; \"brief\" automatically re-keyed 2 -> 3"
+      ],
+      "duration_ms": 197
+    },
+    {
+      "n": 6,
+      "title": "Replacement device re-enrolment and peer continuity",
+      "goal": "2",
+      "status": "PASS",
+      "details": [
+        "pending device denied; lost-phone approval refused; alice-laptop approved replacement; Bob & alice-phone-2 read v3; old v1 DEK fails on v3"
+      ],
+      "duration_ms": 406
+    },
+    {
+      "n": 7,
+      "title": "Control-plane crash during rotation and journal recovery",
+      "goal": "3",
+      "status": "PASS",
+      "details": [
+        "CP SIGKILLed at before_commit (v4 staged); restart aborted v4, kept v3 active, preserved alice-phone revocation and Bob access on A/B/C"
+      ],
+      "duration_ms": 360
+    },
+    {
+      "n": 8,
+      "title": "Signed, encrypted backups and anti-rollback restore",
+      "goal": "4",
+      "status": "PASS",
+      "details": [
+        "refused bad_signature, flipped & truncated payload (digest_mismatch), and older epoch (stale_backup) with live DB unchanged; valid restore succeeded"
+      ],
+      "duration_ms": 1273
+    },
+    {
+      "n": 9,
+      "title": "Offline audit-log verification and log-injection resistance",
+      "goal": "5",
+      "status": "PASS",
+      "details": [
+        "CP + 3 node logs verified OK; edited copy flagged BROKEN seq=2 content_edit; newline-JSON actor injection stayed a single record"
+      ],
+      "duration_ms": 669
+    },
+    {
+      "n": 10,
+      "title": "Explainable privilege & lateral-movement detection + benchmark",
+      "goal": "6, 7, 8",
+      "status": "PASS",
+      "details": [
+        "practice 22 events -> PRIV-1 (evt-008..009) & LM-1 (evt-010..012), evt-013/014 reordered, evt-015 corrected (+2000 ms -> 200 ms delay)",
+        "synthetic holdout (seeds 201,202): incident F1=0.895, median TTA=4807 ms, false alerts/1k benign=0.00"
+      ],
+      "duration_ms": 373
+    },
+    {
+      "n": 11,
+      "title": "Post-quantum E2EE messaging, replay, loss/reordering, forward secrecy",
+      "goal": "9, 10, 11, 12",
+      "status": "PASS",
+      "details": [
+        "13/13 messaging checks passed (seed 2026): mutual PQ handshake, AAD & recipient-field tamper rejection, replay cache, chunked loss/reordering, forward secrecy",
+        "Goal 12 session resumption: NOT SUPPORTED (D-05) — old session IDs/keys after close or revocation rejected"
+      ],
+      "duration_ms": 1646
+    },
+    {
+      "n": 12,
+      "title": "Security self-monitoring alerts across cluster and adapter",
+      "goal": "self-monitoring",
+      "status": "PASS",
+      "details": [
+        "collected 12 cluster alert(s) + adapter A-REVOKED-RETRY & A-HOSTILE-ID (all untrusted IDs terminal-escaped)"
+      ],
+      "duration_ms": 169
+    }
+  ]
+}

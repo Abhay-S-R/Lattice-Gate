@@ -1,0 +1,321 @@
+{
+  "generated_at": "2026-11-26T23:24:53.430Z",
+  "runtime": {
+    "node": "v24.11.1",
+    "platform": "linux",
+    "arch": "x64"
+  },
+  "points": [
+    {
+      "point": "after_prepare",
+      "expected_action": "abort",
+      "rotation": {
+        "from": 1,
+        "to": 2
+      },
+      "active_after": 1,
+      "pass": true,
+      "checks": [
+        {
+          "name": "cp_killed_at_point",
+          "pass": true,
+          "detail": "CP process gone, no answer to the rotate request"
+        },
+        {
+          "name": "journal_at_crash",
+          "pass": true,
+          "detail": "last durable phase PREPARE"
+        },
+        {
+          "name": "recovery_action",
+          "pass": true,
+          "detail": "abort: journal ABORTED"
+        },
+        {
+          "name": "cp_one_active_version",
+          "pass": true,
+          "detail": "active v1 (expected v1); active rows [1]; staged 0"
+        },
+        {
+          "name": "nodes_one_active_version",
+          "pass": true,
+          "detail": "A: epoch 12 v1, B: epoch 12 v1, C: epoch 12 v1"
+        },
+        {
+          "name": "epoch_never_decreases",
+          "pass": true,
+          "detail": "CP 12 -> 12; nodes A 12 -> 12, B 12 -> 12, C 12 -> 12"
+        },
+        {
+          "name": "revoked_stays_revoked",
+          "pass": true,
+          "detail": "CP revoked; nodes device_revoked,device_revoked,device_revoked"
+        },
+        {
+          "name": "committed_data_readable",
+          "pass": true,
+          "detail": "6/6 reads decrypted v1"
+        },
+        {
+          "name": "custodian_test_decrypt",
+          "pass": true,
+          "detail": "1 verified, 0 unreadable"
+        },
+        {
+          "name": "audit_chain_ok",
+          "pass": true,
+          "detail": "16 events"
+        }
+      ]
+    },
+    {
+      "point": "after_stage",
+      "expected_action": "abort",
+      "rotation": {
+        "from": 1,
+        "to": 3
+      },
+      "active_after": 1,
+      "pass": true,
+      "checks": [
+        {
+          "name": "cp_killed_at_point",
+          "pass": true,
+          "detail": "CP process gone, no answer to the rotate request"
+        },
+        {
+          "name": "journal_at_crash",
+          "pass": true,
+          "detail": "last durable phase STAGE"
+        },
+        {
+          "name": "recovery_action",
+          "pass": true,
+          "detail": "abort: journal ABORTED"
+        },
+        {
+          "name": "cp_one_active_version",
+          "pass": true,
+          "detail": "active v1 (expected v1); active rows [1]; staged 0"
+        },
+        {
+          "name": "nodes_one_active_version",
+          "pass": true,
+          "detail": "A: epoch 12 v1, B: epoch 12 v1, C: epoch 12 v1"
+        },
+        {
+          "name": "epoch_never_decreases",
+          "pass": true,
+          "detail": "CP 12 -> 12; nodes A 12 -> 12, B 12 -> 12, C 12 -> 12"
+        },
+        {
+          "name": "revoked_stays_revoked",
+          "pass": true,
+          "detail": "CP revoked; nodes device_revoked,device_revoked,device_revoked"
+        },
+        {
+          "name": "committed_data_readable",
+          "pass": true,
+          "detail": "6/6 reads decrypted v1"
+        },
+        {
+          "name": "custodian_test_decrypt",
+          "pass": true,
+          "detail": "1 verified, 0 unreadable"
+        },
+        {
+          "name": "audit_chain_ok",
+          "pass": true,
+          "detail": "20 events"
+        }
+      ]
+    },
+    {
+      "point": "before_commit",
+      "expected_action": "abort",
+      "rotation": {
+        "from": 1,
+        "to": 4
+      },
+      "active_after": 1,
+      "pass": true,
+      "checks": [
+        {
+          "name": "cp_killed_at_point",
+          "pass": true,
+          "detail": "CP process gone, no answer to the rotate request"
+        },
+        {
+          "name": "journal_at_crash",
+          "pass": true,
+          "detail": "last durable phase STAGE"
+        },
+        {
+          "name": "recovery_action",
+          "pass": true,
+          "detail": "abort: journal ABORTED"
+        },
+        {
+          "name": "cp_one_active_version",
+          "pass": true,
+          "detail": "active v1 (expected v1); active rows [1]; staged 0"
+        },
+        {
+          "name": "nodes_one_active_version",
+          "pass": true,
+          "detail": "A: epoch 12 v1, B: epoch 12 v1, C: epoch 12 v1"
+        },
+        {
+          "name": "epoch_never_decreases",
+          "pass": true,
+          "detail": "CP 12 -> 12; nodes A 12 -> 12, B 12 -> 12, C 12 -> 12"
+        },
+        {
+          "name": "revoked_stays_revoked",
+          "pass": true,
+          "detail": "CP revoked; nodes device_revoked,device_revoked,device_revoked"
+        },
+        {
+          "name": "committed_data_readable",
+          "pass": true,
+          "detail": "6/6 reads decrypted v1"
+        },
+        {
+          "name": "custodian_test_decrypt",
+          "pass": true,
+          "detail": "1 verified, 0 unreadable"
+        },
+        {
+          "name": "audit_chain_ok",
+          "pass": true,
+          "detail": "24 events"
+        }
+      ]
+    },
+    {
+      "point": "after_commit",
+      "expected_action": "roll_forward",
+      "rotation": {
+        "from": 1,
+        "to": 5
+      },
+      "active_after": 5,
+      "pass": true,
+      "checks": [
+        {
+          "name": "cp_killed_at_point",
+          "pass": true,
+          "detail": "CP process gone, no answer to the rotate request"
+        },
+        {
+          "name": "journal_at_crash",
+          "pass": true,
+          "detail": "last durable phase COMMIT"
+        },
+        {
+          "name": "recovery_action",
+          "pass": true,
+          "detail": "roll_forward: journal COMPLETE"
+        },
+        {
+          "name": "cp_one_active_version",
+          "pass": true,
+          "detail": "active v5 (expected v5); active rows [5]; staged 0"
+        },
+        {
+          "name": "nodes_one_active_version",
+          "pass": true,
+          "detail": "A: epoch 13 v5, B: epoch 13 v5, C: epoch 13 v5"
+        },
+        {
+          "name": "epoch_never_decreases",
+          "pass": true,
+          "detail": "CP 12 -> 13; nodes A 12 -> 13, B 12 -> 13, C 12 -> 13"
+        },
+        {
+          "name": "revoked_stays_revoked",
+          "pass": true,
+          "detail": "CP revoked; nodes device_revoked,device_revoked,device_revoked"
+        },
+        {
+          "name": "committed_data_readable",
+          "pass": true,
+          "detail": "6/6 reads decrypted v5"
+        },
+        {
+          "name": "custodian_test_decrypt",
+          "pass": true,
+          "detail": "1 verified, 0 unreadable"
+        },
+        {
+          "name": "audit_chain_ok",
+          "pass": true,
+          "detail": "29 events"
+        }
+      ]
+    },
+    {
+      "point": "during_distribute",
+      "expected_action": "roll_forward",
+      "rotation": {
+        "from": 5,
+        "to": 6
+      },
+      "active_after": 6,
+      "pass": true,
+      "checks": [
+        {
+          "name": "cp_killed_at_point",
+          "pass": true,
+          "detail": "CP process gone, no answer to the rotate request"
+        },
+        {
+          "name": "journal_at_crash",
+          "pass": true,
+          "detail": "last durable phase DISTRIBUTE"
+        },
+        {
+          "name": "recovery_action",
+          "pass": true,
+          "detail": "roll_forward: journal COMPLETE"
+        },
+        {
+          "name": "cp_one_active_version",
+          "pass": true,
+          "detail": "active v6 (expected v6); active rows [6]; staged 0"
+        },
+        {
+          "name": "nodes_one_active_version",
+          "pass": true,
+          "detail": "A: epoch 14 v6, B: epoch 14 v6, C: epoch 14 v6"
+        },
+        {
+          "name": "epoch_never_decreases",
+          "pass": true,
+          "detail": "CP 13 -> 14; nodes A 13 -> 14, B 13 -> 14, C 13 -> 14"
+        },
+        {
+          "name": "revoked_stays_revoked",
+          "pass": true,
+          "detail": "CP revoked; nodes device_revoked,device_revoked,device_revoked"
+        },
+        {
+          "name": "committed_data_readable",
+          "pass": true,
+          "detail": "6/6 reads decrypted v6"
+        },
+        {
+          "name": "custodian_test_decrypt",
+          "pass": true,
+          "detail": "1 verified, 0 unreadable"
+        },
+        {
+          "name": "audit_chain_ok",
+          "pass": true,
+          "detail": "34 events"
+        }
+      ]
+    }
+  ],
+  "pass": true
+}

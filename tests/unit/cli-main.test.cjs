@@ -14,7 +14,7 @@ test('every registered command has the module shape', () => {
     assert.equal(typeof mod.options, 'object');
     assert.equal(typeof mod.run, 'function');
   }
-  for (const n of ['compat', 'verify-log', 'keys', 'checkpoint']) assert.ok(main.COMMANDS.has(n), n);
+  for (const n of ['compat', 'verify-log', 'keys', 'checkpoint', 'alerts']) assert.ok(main.COMMANDS.has(n), n);
 });
 
 test('kig help lists every command on stdout, exit 0', () => {

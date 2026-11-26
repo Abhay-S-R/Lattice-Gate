@@ -30,7 +30,7 @@ const compat = {
 const COMMANDS = new Map();
 // Registered after the error classes exist (command modules import them from here).
 module.exports = { COMMANDS, UsageError, CommandError };
-for (const mod of [compat, require('./verify-log.cjs'), require('./keys.cjs'), require('./checkpoint.cjs')]) {
+for (const mod of [compat, require('./verify-log.cjs'), require('./keys.cjs'), require('./checkpoint.cjs'), require('./alerts.cjs')]) {
   COMMANDS.set(mod.name, mod);
 }
 

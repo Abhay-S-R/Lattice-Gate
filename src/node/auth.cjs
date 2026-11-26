@@ -4,16 +4,19 @@ const { encode } = require('../core/encoding.cjs');
 const { REQUEST, RULES } = require('../core/contracts.cjs');
 const { tx } = require('../store/db.cjs');
 const audit = require('../core/audit.cjs');
-const ids = require('../core/ids.cjs');
-const { getMeta } = require('../store/schema-base.cjs');
-
 const monotonicNs = () => process.hrtime.bigint().toString();
 function challenge(db, { ttlMs = REQUEST.challengeTtlMs } = {}) {
   const nonce = provider.random(REQUEST.nonceBytes);
+  const createdMs = Date.now();
+  const expiresMs = createdMs + ttlMs;
   tx(db, () => {
-    db.prepare('INSERT INTO challenges(nonce,created_mono_ns,expires_ms) VALUES(?,?,?)').run(nonce, monotonicNs(), Date.now() + ttlMs);
+    // Keep expired challenges for one TTL so requests can receive nonce_expired
+    // instead of becoming indistinguishable from never-issued nonces.
+    db.prepare('DELETE FROM challenges WHERE expires_ms<=?').run(createdMs - REQUEST.challengeTtlMs);
+    db.prepare('DELETE FROM used_nonces WHERE used_ms<=?').run(createdMs - REQUEST.challengeTtlMs);
+    db.prepare('INSERT INTO challenges(nonce,created_mono_ns,expires_ms) VALUES(?,?,?)').run(nonce, monotonicNs(), expiresMs);
   });
-  return { nonce: nonce.toString('base64'), expires_ms: Date.now() + ttlMs };
+  return { nonce: nonce.toString('base64'), expires_ms: expiresMs };
 }
 function policyState(db, supplied) {
   if (supplied) return supplied;
@@ -21,6 +24,7 @@ function policyState(db, supplied) {
 }
 function findDevice(snapshot, id) { return snapshot && snapshot.devices && snapshot.devices.find(d => d.device_id === id) || null; }
 function authenticate(db, req, options = {}) {
+  if (!req || typeof req !== 'object' || Array.isArray(req)) return { ok: false, device: null, rule: RULES.badSignature };
   const state = policyState(db, options.policy);
   let rule = null, device = null;
   const nonce = Buffer.isBuffer(req.nonce) ? req.nonce : Buffer.from(typeof req.nonce === 'string' ? req.nonce : '', 'base64');
@@ -35,14 +39,18 @@ function authenticate(db, req, options = {}) {
       const ch = nonce.length === REQUEST.nonceBytes ? db.prepare('SELECT expires_ms FROM challenges WHERE nonce=?').get(encNonce) : null;
       const used = nonce.length === REQUEST.nonceBytes && db.prepare('SELECT 1 FROM used_nonces WHERE nonce=?').get(encNonce);
       if (!ch) rule = used ? RULES.nonceReused : RULES.nonceUnknown;
-      else if (ch.expires_ms < Date.now()) { db.prepare('DELETE FROM challenges WHERE nonce=?').run(encNonce); rule = RULES.nonceExpired; }
+      else if (ch.expires_ms <= Date.now()) { db.prepare('DELETE FROM challenges WHERE nonce=?').run(encNonce); rule = RULES.nonceExpired; }
       else {
         db.prepare('DELETE FROM challenges WHERE nonce=?').run(encNonce);
         db.prepare('INSERT INTO used_nonces(nonce,used_ms) VALUES(?,?)').run(encNonce, Date.now());
-        const pubDer = req.sign_pk ? Buffer.from(req.sign_pk, 'base64') : null;
-        const hash = pubDer && provider.sha256(pubDer).toString('hex');
         let good = false;
-        try { good = !!pubDer && hash === snapDevice.sign_pk_sha256 && provider.verify(provider.importPublic(pubDer), REQUEST.context, encode(REQUEST.label, REQUEST.fields.map(k => fields[k])), Buffer.from(req.sig || '', 'base64')); } catch { good = false; }
+        try {
+          const pubDer = req.sign_pk ? Buffer.from(req.sign_pk, 'base64') : null;
+          const hash = pubDer && provider.sha256(pubDer).toString('hex');
+          good = req.version === REQUEST.version && req.account === snapDevice.account && !!pubDer &&
+            hash === snapDevice.sign_pk_sha256 &&
+            provider.verify(provider.importPublic(pubDer), REQUEST.context, encode(REQUEST.label, REQUEST.fields.map(k => fields[k])), Buffer.from(req.sig || '', 'base64'));
+        } catch { good = false; }
         if (!good) rule = RULES.badSignature;
         else {
           device = { ...snapDevice, key_version: Number(req.key_version) };

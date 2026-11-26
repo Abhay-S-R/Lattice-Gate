@@ -20,7 +20,7 @@ async function probeUntil(nodeUrl, home, account, deviceId, expected) {
       home, version: 1, account, device_id: deviceId, resource: 'probe',
       request_id: `${deviceId}-${++probeIndex}`, key_version: 1,
     });
-    if (response.status === 200 && response.json.decision === expected) return response.json;
+    if (response.decision === expected) return response;
     await pause(20);
   }
   throw new Error(`${deviceId} did not receive ${expected} from ${nodeUrl}`);

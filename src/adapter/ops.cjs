@@ -14,6 +14,7 @@ const schema = require('../store/schema-adapter.cjs');
 const audit = require('../core/audit.cjs');
 const ids = require('../core/ids.cjs');
 const { authorizeOwnerRead } = require('../core/policy.cjs');
+const provider = require('../crypto/provider.cjs');
 
 // ---------------------------------------------------------------- shared helpers
 
@@ -184,8 +185,73 @@ async function auditOp(ctx, req) {
 
 // ---------------------------------------------------------------- protected_read (B, Task 1.12)
 
-async function protectedRead(ctx, req) { // eslint-disable-line no-unused-vars
-  throw new Error('not implemented');
+/**
+ * Protected read (architecture §5.5, P0-07). Order is fixed: authorize, then
+ * encapsulate to the caller's ML-KEM-768 key, then prove knowledge of the body.
+ *
+ * ML-KEM encapsulation is async (WebCrypto), so it can't run inside the
+ * synchronous tx helper. Two short transactions instead:
+ *   tx #1  authorize; a deny is recorded here and returned.
+ *   (out)  encapsulate; proof = hex HMAC-SHA-256(sharedKey, UTF-8(challenge + body)).
+ *   tx #2  re-authorize and record. If the decision changed in between (e.g. a
+ *          revoke landed), record and return that deny. If tx #2 fails, return
+ *          deny: an allow is never returned unless it was recorded.
+ * The shared secret is wiped and never stored, logged or returned.
+ * @param {{ stateDir: string }} ctx
+ * @param {{ actor: string, asset: string, challenge: string, publicKey: Buffer, request_id: string|null }} req
+ * @returns {Promise<{ ciphertext: string, proof: string } | { decision: 'deny' }>}
+ */
+async function protectedRead(ctx, req) {
+  const db = openExisting(ctx);
+  if (!db) return { ...DENY };
+  try {
+    const ev = { kind: 'access', op: 'protected_read', request_id: req.request_id ?? undefined, actor: req.actor, asset: req.asset };
+
+    // tx #1: authorize; record a deny right away.
+    const first = tx(db, () => {
+      const gen = currentGen(db);
+      if (gen === 0) return null;
+      const a = authorizeOwnerRead(db, req.actor, req.asset);
+      if (a.decision === 'deny') audit.append(db, { ...ev, gen, decision: 'deny', rule: a.rule });
+      return a;
+    });
+    if (!first || first.decision === 'deny') return { ...DENY };
+
+    // Outside any transaction: encapsulate and compute the proof.
+    let ciphertext, proof;
+    try {
+      const kem = await provider.kemEncapsulateRaw(req.publicKey);
+      try {
+        proof = provider.hmacHex(kem.sharedKey, Buffer.from(req.challenge + first.body, 'utf8'));
+      } finally {
+        kem.sharedKey.fill(0);
+      }
+      ciphertext = kem.ciphertext.toString('base64');
+    } catch (e) {
+      if (!(e instanceof provider.InvalidKeyError)) throw e;
+      tx(db, () => {
+        audit.append(db, { ...ev, gen: currentGen(db), decision: 'deny', rule: 'invalid_public_key' });
+      });
+      return { ...DENY };
+    }
+
+    // tx #2: re-authorize and record the final decision.
+    let allowed;
+    try {
+      allowed = tx(db, () => {
+        const gen = currentGen(db);
+        const a = gen === 0 ? null : authorizeOwnerRead(db, req.actor, req.asset);
+        const ok = a !== null && a.decision === 'allow' && a.body === first.body;
+        audit.append(db, { ...ev, gen, decision: ok ? 'allow' : 'deny', rule: ok ? 'owner_allowed' : (a?.rule ?? 'no_state') });
+        return ok;
+      });
+    } catch {
+      return { ...DENY };
+    }
+    return allowed ? { ciphertext, proof } : { ...DENY };
+  } finally {
+    db.close();
+  }
 }
 
 module.exports = { setup, read, revoke, audit: auditOp, protectedRead, openAdapterDb, currentGen, bumpEpoch, using };

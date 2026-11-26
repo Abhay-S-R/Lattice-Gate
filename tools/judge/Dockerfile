@@ -6,8 +6,11 @@
 # inside the replica; the submission itself never uses it.
 FROM node:24.11.1-bookworm-slim AS base
 RUN apt-get update \
- && apt-get install -y --no-install-recommends python3 \
+ && apt-get install -y --no-install-recommends python3 python3-venv \
+ && python3 -m venv /opt/pqcrypto \
+ && /opt/pqcrypto/bin/python -m pip install --no-cache-dir pqcrypto==0.4.0 \
  && rm -rf /var/lib/apt/lists/*
+ENV PATH="/opt/pqcrypto/bin:${PATH}"
 
 FROM base
 COPY --from=toolkit . /toolkit

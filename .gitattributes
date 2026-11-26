@@ -1,0 +1,3 @@
+# The judging container is Linux: keep LF everywhere, even on Windows checkouts.
+* text=auto eol=lf
+*.db binary

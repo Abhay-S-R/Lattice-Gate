@@ -1,0 +1,45 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  arm64:
+    # Judging runs on linux-arm64 with Node 24.11.1 (features D-17); test natively there.
+    runs-on: ubuntu-24.04-arm
+    container: node:24.11.1-bookworm
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Organizer toolkit (pinned)
+        uses: actions/checkout@v4
+        with:
+          repository: ScalerOpenSourceLabs/Track-4-Toolkit
+          ref: 8901dfbdbfe048853e0bfa25b60583d1e6617a63
+          path: toolkit
+
+      - name: Runtime
+        run: node -p "process.version + ' ' + process.arch"
+
+      - name: kig compat
+        run: node kig.cjs compat | tee -a evidence-ci.txt
+
+      - name: Tests
+        run: npm test
+
+      - name: Toolkit validator against root adapter
+        # Non-blocking until the adapter is wired (Task 1.14); then remove continue-on-error.
+        continue-on-error: true
+        run: TOOLKIT_DIR=toolkit node scripts/validate.cjs
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidence-arm64-${{ github.sha }}
+          path: |
+            evidence/
+            evidence-ci.txt
+          if-no-files-found: ignore

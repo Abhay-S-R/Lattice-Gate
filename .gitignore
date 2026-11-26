@@ -1,0 +1,10 @@
+node_modules/
+*.db
+*.db-wal
+*.db-shm
+*.db.quarantine-*
+.kig/
+evidence/tmp/
+__pycache__/
+.venv/
+.superpowers/

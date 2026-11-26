@@ -64,11 +64,23 @@ jobs:
         with:
           node-version: 24.11.1
 
+      # GitHub's default bash runs with -eo pipefail, so `| tee` keeps the step's exit status.
+      - name: Evidence folder
+        run: mkdir -p evidence-replica && echo "commit ${GITHUB_SHA} runner ${RUNNER_ARCH} $(date -u +%FT%TZ)" > evidence-replica/run.txt
+
       - name: kig compat (replica)
-        run: node scripts/judge.cjs node kig.cjs compat
+        run: node scripts/judge.cjs node kig.cjs compat 2>&1 | tee evidence-replica/compat.txt
 
       - name: Tests (replica)
-        run: node scripts/judge.cjs npm test
+        run: node scripts/judge.cjs npm test 2>&1 | tee evidence-replica/npm-test.txt
 
       - name: Toolkit validator (replica)
-        run: node scripts/judge.cjs node scripts/validate.cjs
+        run: node scripts/judge.cjs node scripts/validate.cjs 2>&1 | tee evidence-replica/validate.txt
+
+      - name: Upload replica evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidence-replica-arm64-${{ github.sha }}
+          path: evidence-replica/
+          if-no-files-found: ignore

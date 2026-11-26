@@ -55,7 +55,9 @@ const bench = {
   },
 };
 
-for (const mod of [compat, require('./verify-log.cjs'), require('./keys.cjs'), require('./checkpoint.cjs'), require('./alerts.cjs'), detect, bench]) {
+const supervisor = require('./supervisor.cjs');
+for (const mod of [compat, require('./verify-log.cjs'), require('./keys.cjs'), require('./checkpoint.cjs'), require('./alerts.cjs'), detect, bench,
+  supervisor.up, supervisor.down, supervisor.statusCommand]) {
   COMMANDS.set(mod.name, mod);
 }
 

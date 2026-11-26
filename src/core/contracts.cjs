@@ -105,7 +105,7 @@ const TABLES = freeze({
 const HTTP = freeze({ maxBodyBytes: 1024 * 1024, decisionStatus: 200, malformedStatus: 400, timeoutMs: 5000 });
 const ROUTES = freeze({
   cp: { health: 'GET /v1/health', policyHead: 'GET /v1/policy/head', policyPull: 'POST /v1/policy/pull', policyAck: 'POST /v1/policy/ack', enrol: 'POST /v1/devices/enrol', revoke: 'POST /v1/devices/revoke' },
-  node: { health: 'GET /v1/node/health', policyHead: 'GET /v1/node/policy/head', policyPull: 'POST /v1/node/policy/pull', challenge: 'GET /v1/challenge', authenticate: 'POST /v1/auth', fileRead: 'POST /v1/files/read' },
+  node: { health: 'GET /v1/health', policyHead: 'GET /v1/policy/head', policyPull: 'POST /v1/policy/pull', challenge: 'GET /v1/challenge', authenticate: 'POST /v1/auth', fileRead: 'POST /v1/files/read' },
 });
 const RULES = freeze({
   leaseExpired: 'lease_expired', unknownDevice: 'unknown_device', deviceRevoked: 'device_revoked',

@@ -83,7 +83,7 @@ Schema files (`src/store/schema-cp.cjs`, `schema-node.cjs`, `schema-device.cjs`)
 
 - `core/http.cjs` (3.1): `serve(port, routes: Map<'METHOD /path', handler>)`, `call(url, method, json, { timeoutMs })`. JSON only, 1 MiB body cap, `Buffer`s as base64 fields.
 - Every decision endpoint answers **HTTP 200** with `{ decision: 'allow'|'deny', rule }` (plus payload on allow). Malformed requests → 400 `{ error }`. Never 500 with details; never stack traces.
-- Route strings are unique across the combined CP/node table in `contracts.ROUTES`; node-only routes use the `/v1/node/` prefix where a CP route would otherwise collide.
+- Route strings are unique within each server's `contracts.ROUTES` map. CP and node servers may share paths because they listen on separate loopback ports; both expose `GET /v1/health`.
 - **Route registration without shared edits:** `node/server.cjs` and `cp/server.cjs` (A) build their route map from a fixed list of modules: `node/routes-policy.cjs` (A), `node/routes-auth.cjs` and `node/routes-files.cjs` (B); likewise for the CP. Each module exports `[[ 'METHOD /path', handler ], …]`. Adding B's module to the list is a one-line change agreed in the kick-off.
 
 ### C7. Signed request transcript (owner: B, read by A's revocation probes)

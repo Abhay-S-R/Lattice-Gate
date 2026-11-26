@@ -13,5 +13,10 @@ CREATE TABLE grants(file_id TEXT NOT NULL, account TEXT NOT NULL, created_ms INT
 CREATE TABLE envelopes(file_id TEXT NOT NULL, version INTEGER NOT NULL, device_id TEXT NOT NULL, envelope TEXT NOT NULL, PRIMARY KEY(file_id,version,device_id), FOREIGN KEY(file_id,version) REFERENCES file_versions(file_id,version), FOREIGN KEY(device_id) REFERENCES devices(device_id)) STRICT;
 CREATE TABLE custodian_wraps(file_id TEXT NOT NULL, version INTEGER NOT NULL, wrap TEXT NOT NULL, PRIMARY KEY(file_id,version), FOREIGN KEY(file_id,version) REFERENCES file_versions(file_id,version)) STRICT;
 `;
-function init(db) { initBase(db); db.exec(DDL); /* ---- A: control-plane tables ---- */ }
-module.exports = { VERSION: SCHEMA_VERSION_ADAPTER, init, DDL };
+/* ---- A: control-plane tables ---- */
+const A_DDL = `
+CREATE TABLE snapshots(epoch INTEGER PRIMARY KEY, body TEXT NOT NULL, sig BLOB NOT NULL, created_ms INTEGER NOT NULL) STRICT;
+CREATE TABLE node_acks(node_id TEXT NOT NULL, epoch INTEGER NOT NULL, acked_ms INTEGER NOT NULL, sig BLOB NOT NULL, PRIMARY KEY(node_id,epoch)) STRICT;
+`;
+function init(db) { initBase(db); db.exec(DDL); db.exec(A_DDL); }
+module.exports = { VERSION: SCHEMA_VERSION_ADAPTER, init, DDL, A_DDL };

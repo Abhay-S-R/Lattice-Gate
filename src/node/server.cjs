@@ -1,12 +1,29 @@
 'use strict';
 const { serve } = require('../core/http.cjs');
-const { ports, ROUTES, NODE_IDS } = require('../core/contracts.cjs');
+const fs = require('node:fs');
+const { ports, ROUTES, NODE_IDS, kigHome, layout } = require('../core/contracts.cjs');
+const schema = require('../store/schema-node.cjs');
+const { openDb } = require('../store/db.cjs');
+const policyRoutes = require('./routes-policy.cjs');
+const authRoutes = require('./routes-auth.cjs');
+const fileRoutes = require('./routes-files.cjs');
 
 function start({ env = process.env } = {}) {
   const id = env.KIG_NODE_ID;
   if (!NODE_IDS.includes(id)) throw new TypeError('invalid KIG_NODE_ID');
-  const route = new Map([[ROUTES.node.health, async () => ({ status: 200, json: { status: 'ok', service: 'node', node_id: id, instance: env.KIG_INSTANCE_TOKEN || null } })]]);
+  const L = layout(kigHome(env));
+  const db = openDb(L.node(id).db, { create: false, version: schema.VERSION, init: schema.init });
+  const privateKey = policyRoutes.ensureNodeKey(L.root, id);
+  const cpPub = fs.readFileSync(L.anchor.cpPolicyPub);
+  const route = new Map([
+    [ROUTES.node.health, async () => ({ status: 200, json: { status: 'ok', service: 'node', node_id: id, instance: env.KIG_INSTANCE_TOKEN || null } })],
+    ...policyRoutes.routes(db, { id, privateKey, cpPub, env }),
+    ...authRoutes.routes(db),
+    ...fileRoutes.routes(db),
+  ]);
   const server = serve(ports(env)[id], route);
+  const stopPull = policyRoutes.startPullLoop(db, { id, env, cpPub });
+  server.once('close', () => { stopPull(); db.close(); });
   const stop = () => server.close();
   process.once('SIGTERM', stop);
   process.once('SIGINT', stop);

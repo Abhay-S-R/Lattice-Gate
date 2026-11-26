@@ -37,6 +37,10 @@ async function startCluster(home, { nodes = NODE_IDS } = {}) {
   }
   const base = await freePortBase();
   const env = { KIG_HOME: path.resolve(home), KIG_PORT_BASE: String(base) };
+  if (!fs.existsSync(path.join(home, 'cp', 'registry.db'))) {
+    const initialized = runKig(['init'], { env, timeoutMs: 30000 });
+    if (initialized.code !== 0) throw new Error(`cluster initialization failed: ${initialized.stderr || initialized.stdout}`);
+  }
   const started = runKig(['up'], { env, timeoutMs: 15000 });
   if (started.code !== 0) {
     const logs = ['cp', ...NODE_IDS].map((id) => {

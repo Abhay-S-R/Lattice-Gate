@@ -27,8 +27,11 @@ async function probe(id, record, ps, timeoutMs = 350) {
   if (!record) return false;
   try {
     const r = await call(healthUrl(id, ps), 'GET', null, { timeoutMs });
-    return r.status === 200 && r.json.status === 'ok' && r.json.instance === record.instance &&
+    const serviceHealthy = r.status === 200 && r.json.status === 'ok' && r.json.instance === record.instance &&
       (id === 'cp' ? r.json.service === 'cp' : r.json.node_id === id);
+    if (!serviceHealthy || id === 'cp') return serviceHealthy;
+    const policy = await call(`${endpoint(id, ps)}${ROUTES.node.policyHead.split(' ')[1]}`, 'GET', null, { timeoutMs });
+    return policy.status === 200 && Number.isSafeInteger(policy.json.epoch) && policy.json.epoch > 0 && policy.json.lease_valid === true;
   } catch { return false; }
 }
 

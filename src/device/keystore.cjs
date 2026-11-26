@@ -9,7 +9,10 @@ function openDeviceDb(home, deviceId, create = true) {
   const l = contracts.layout(home); const d = l.device(deviceId);
   if (create) fs.mkdirSync(d.dir, { recursive: true, mode: 0o700 });
   const db = openDb(d.db, { create, version: schema.VERSION, init: schema.init });
-  if (create) fs.chmodSync(d.db, 0o600);
+  try {
+    schema.ensureMessaging(db);
+    if (create) fs.chmodSync(d.db, 0o600);
+  } catch (e) { db.close(); throw e; }
   return db;
 }
 function create(home, deviceId) {

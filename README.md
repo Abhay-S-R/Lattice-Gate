@@ -57,6 +57,7 @@ Exit code is 0 for every answer, denials included. Only a `setup` or `revoke` th
 | `device enrol <device> --account <account>` / `device approve <device> --by <device>\|--operator --approval-id <id>` | Creates a device keystore with proof of possession, then activates it through approval |
 | `file publish <file> --as <device> --input <path>` / `file read <file> --device <device> --node <A\|B\|C>` | Encrypts file contents at the control plane and reads them through an authenticated node |
 | `share <file> --with <account>` | Grants an account access by adding device-bound encrypted envelopes |
+| `msg demo [--seed <uint32>]` | Runs the authenticated messaging, replay protection, forward-secrecy, and seeded delivery demonstration |
 
 Operator flow for the adapter's log:
 

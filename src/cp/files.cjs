@@ -37,11 +37,13 @@ function distribute(db, fileId, version, home = contracts.kigHome()) {
 }
 function txNode(db, fn) { return require('../store/db.cjs').tx(db, fn); }
 function publish(db, { file_id, owner_device, plaintext, home = contracts.kigHome() }) {
-  if (typeof file_id !== 'string' || !Buffer.isBuffer(plaintext)) throw new TypeError('invalid file publish request');
-  const owner = registry.getDevice(db, owner_device);
-  if (!owner || owner.status !== 'active') throw new Error('owner_device_inactive');
-  const dek = provider.random(32), nonce = provider.random(12), version = 1;
+  let dek;
   try {
+    if (typeof file_id !== 'string' || !Buffer.isBuffer(plaintext)) throw new TypeError('invalid file publish request');
+    const owner = registry.getDevice(db, owner_device);
+    if (!owner || owner.status !== 'active') throw new Error('owner_device_inactive');
+    dek = provider.random(32);
+    const nonce = provider.random(12), version = 1;
     const ciphertext = provider.aeadSeal(dek, nonce, fileAad(file_id, version), plaintext);
     const layout = contracts.layout(home);
     const masterPriv = provider.importPrivate(require('node:fs').readFileSync(layout.cp.keys.masterKem.key));
@@ -58,7 +60,7 @@ function publish(db, { file_id, owner_device, plaintext, home = contracts.kigHom
     distribute(db, file_id, version, home);
     registry.maybePublish(db);
     return { file_id, version, ciphertext_bytes: ciphertext.length };
-  } finally { dek.fill(0); plaintext.fill(0); }
+  } finally { dek?.fill(0); if (Buffer.isBuffer(plaintext)) plaintext.fill(0); }
 }
 function share(db, { file_id, account, home = contracts.kigHome() }) {
   const file = db.prepare('SELECT active_version FROM files WHERE file_id=?').get(ids.enc(file_id));

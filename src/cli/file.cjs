@@ -14,9 +14,13 @@ module.exports = { name: 'file', describe: 'publish and read encrypted files', u
   const home = path.resolve(values.home || contracts.kigHome());
   if (positionals[0] === 'publish' && positionals.length === 2) {
     if (!values.as || !values.input) throw new UsageError('publish requires --as <device> --input <path>');
-    const plain = fs.readFileSync(path.resolve(values.input)); const db = openCp(home);
-    try { const result = files.publish(db, { file_id: positionals[1], owner_device: values.as, plaintext: plain, home }); io.out(`PUBLISHED ${result.file_id} version=${result.version} bytes=${result.ciphertext_bytes}\n`); }
-    catch (e) { throw new CommandError(`publish failed (${e.message})`); } finally { db.close(); }
+    const plain = fs.readFileSync(path.resolve(values.input)); let db;
+    try {
+      db = openCp(home);
+      const result = files.publish(db, { file_id: positionals[1], owner_device: values.as, plaintext: plain, home });
+      io.out(`PUBLISHED ${result.file_id} version=${result.version} bytes=${result.ciphertext_bytes}\n`);
+    } catch (e) { throw new CommandError(`publish failed (${e.message})`); }
+    finally { plain.fill(0); db?.close(); }
     return 0;
   }
   if (positionals[0] === 'read' && positionals.length === 2) {
@@ -32,9 +36,10 @@ module.exports = { name: 'file', describe: 'publish and read encrypted files', u
       const result = await client.request(nodeUrl, contracts.layout(home).device(values.device).dir, 'file.read', fields);
       const response = result.json || result;
       const plaintext = deviceFiles.read(home, values.device, response);
-      if (values.out) { fs.writeFileSync(path.resolve(values.out), plaintext, { mode: 0o600 }); io.out(`READ ${positionals[1]} via ${values.node} -> ${path.resolve(values.out)}\n`); }
-      else io.out(plaintext.toString('utf8') + (plaintext.length && plaintext[plaintext.length - 1] === 10 ? '' : '\n'));
-      plaintext.fill(0);
+      try {
+        if (values.out) { fs.writeFileSync(path.resolve(values.out), plaintext, { mode: 0o600 }); io.out(`READ ${positionals[1]} via ${values.node} -> ${path.resolve(values.out)}\n`); }
+        else io.out(plaintext.toString('utf8') + (plaintext.length && plaintext[plaintext.length - 1] === 10 ? '' : '\n'));
+      } finally { plaintext.fill(0); }
     } catch (e) { throw new CommandError(`read failed (${e.message})`); }
     return 0;
   }

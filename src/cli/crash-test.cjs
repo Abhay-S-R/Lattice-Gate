@@ -98,6 +98,15 @@ async function request(home, env, node, device, account, op, keyVersion) {
   });
 }
 
+/** Arm CP with KIG_CRASH_AT=point, trigger rotate(fileId), and wait for CP SIGKILL. */
+async function crashCpAt(home, env, point, fileId = 'brief') {
+  const armed = await supervisor.restartService(home, { ...env, KIG_CRASH_AT: point, KIG_CRASH_HARNESS: '1' }, 'cp');
+  let answered = null;
+  try { answered = await call(`${url(ports(env).cp)}${ROUTES.cp.rotate.split(' ')[1]}`, 'POST', { file_id: fileId }, { timeoutMs: 30000 }); } catch { /* expected: the CP died */ }
+  const died = await until(() => !pidAlive(armed.pid), 10000);
+  return { pid: armed.pid, died: Boolean(died) && answered === null };
+}
+
 /** One crash point. Returns { point, pass, checks: [{name, pass, detail}] }. */
 async function runPoint(home, env, point, marker) {
   const checks = [];
@@ -110,11 +119,8 @@ async function runPoint(home, env, point, marker) {
   const nodeBefore = Object.fromEntries(NODE_IDS.map((id) => [id, nodeState(home, id).applied_epoch]));
 
   // 1. CP with the crash point armed; ask it to rotate; it must die at that point.
-  const armed = await supervisor.restartService(home, { ...env, KIG_CRASH_AT: point, KIG_CRASH_HARNESS: '1' }, 'cp');
-  let answered = null;
-  try { answered = await call(`${url(ports(env).cp)}${ROUTES.cp.rotate.split(' ')[1]}`, 'POST', { file_id: 'brief' }, { timeoutMs: 30000 }); } catch { /* expected: the CP died */ }
-  const died = await until(() => !pidAlive(armed.pid), 10000);
-  check('cp_killed_at_point', died && answered === null, died ? 'CP process gone, no answer to the rotate request' : 'CP still alive');
+  const killRes = await crashCpAt(home, env, point, 'brief');
+  check('cp_killed_at_point', killRes.died, killRes.died ? 'CP process gone, no answer to the rotate request' : 'CP still alive');
   const crashed = withRegistry(home, (db) => {
     const rows = db.prepare('SELECT rotation_id, phase, from_version, to_version FROM rotation_journal ORDER BY rowid').all().filter((r) => !before.rotations.has(r.rotation_id));
     if (!rows.length) return null;
@@ -232,4 +238,5 @@ module.exports = {
     return report.pass ? 0 : 1;
   },
   EXPECT,
+  crashCpAt,
 };

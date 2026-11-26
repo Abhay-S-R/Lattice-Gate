@@ -66,7 +66,7 @@ for (const mod of [compat, require('./verify-log.cjs'), require('./keys.cjs'), r
   require('./revoke.cjs'), require('./node.cjs'),
   require('./rotate.cjs'), require('./lost.cjs'), require('./crash-test.cjs'),
   require('./backup.cjs').backup, require('./backup.cjs').restore,
-  require('./msg.cjs'),
+  require('./msg.cjs'), require('./demo.cjs'),
   detect, bench, supervisor.up, supervisor.down, supervisor.statusCommand]) {
   COMMANDS.set(mod.name, mod);
 }

@@ -99,8 +99,25 @@ async function read(ctx, req) { // eslint-disable-line no-unused-vars
 
 // ---------------------------------------------------------------- revoke (A, Task 1.10)
 
-async function revoke(ctx, req) { // eslint-disable-line no-unused-vars
-  throw new Error('not implemented');
+/**
+ * Persist a revocation. Creates the store (generation 0) if none exists yet, so a
+ * revocation is never lost. Idempotent per actor; epoch bumps on every call.
+ * Throws if the change can't be persisted: an unpersisted revoke must never be acknowledged.
+ * A corrupt store is not quarantined here (only setup does that); the error propagates.
+ * @param {{ stateDir: string }} ctx
+ * @param {{ actor: string }} req
+ * @returns {Promise<{}>}
+ */
+async function revoke(ctx, req) {
+  const db = openAdapterDb(ctx.stateDir, true);
+  using(db, () => tx(db, () => {
+    const gen = currentGen(db);
+    const epoch = bumpEpoch(db);
+    db.prepare(`INSERT INTO revoked_actors (actor, source, epoch)
+      VALUES (?, 'revoke', ?) ON CONFLICT (actor) DO NOTHING`).run(ids.enc(req.actor), epoch);
+    audit.append(db, { gen, kind: 'revoke', actor: req.actor });
+  }));
+  return {};
 }
 
 // ---------------------------------------------------------------- audit (A, Task 1.11)

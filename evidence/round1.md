@@ -17,7 +17,7 @@ All in the judging replica (`npm run judge -- …`): linux/amd64, Node 24.11.1, 
 | `protected_read` interoperability | **PASS**: `pqcrypto==0.4.0` decapsulates and recomputes the proof, `interop 25/25` (part of the suite above) | `evidence/x64-replica-test.txt` |
 | Toolkit lost-device validator | **PASS**: `Local scenario passed.` including "fake key stays out of output" | `evidence/x64-replica-validate.txt` |
 | Secret marker scan | **PASS**: unique `key_material` marker absent from stdout, stderr and every file under the state directory (test `marker scan` in `tests/negative/`) | `evidence/x64-replica-test.txt` |
-| CI on x86-64 (`x64` and `judging-replica` jobs) | Pending the next push; artifacts `evidence-x64-<sha>` and `evidence-replica-x64-<sha>` | GitHub Actions |
+| CI on x86-64 (`x64` and `judging-replica` jobs) | **PASS**, confirmed by the user in GitHub; run URL/commit not captured here | GitHub Actions |
 
 ## Scope and limitations
 

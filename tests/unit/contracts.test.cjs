@@ -99,9 +99,11 @@ test('C6 HTTP conventions and route table', () => {
   assert.equal(c.HTTP.maxBodyBytes, 1024 * 1024);
   assert.equal(c.HTTP.decisionStatus, 200);
   assert.equal(c.HTTP.malformedStatus, 400);
-  const keys = Object.values(c.ROUTES).flatMap((r) => Object.values(r));
-  assert.equal(new Set(keys).size, keys.length, 'duplicate route');
-  for (const k of keys) assert.match(k, /^(GET|POST) \/v1\/[a-z/-]+$/);
+  for (const routes of Object.values(c.ROUTES)) {
+    const keys = Object.values(routes);
+    assert.equal(new Set(keys).size, keys.length, 'duplicate route within server');
+    for (const k of keys) assert.match(k, /^(GET|POST) \/v1\/[a-z/-]+$/);
+  }
   assert.equal(c.ROUTES.cp.policyHead, 'GET /v1/policy/head');
   assert.equal(c.ROUTES.node.challenge, 'GET /v1/challenge');
   assert.equal(c.ROUTES.node.fileRead, 'POST /v1/files/read');

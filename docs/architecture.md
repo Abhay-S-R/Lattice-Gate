@@ -387,7 +387,7 @@ Bodies are stored as plaintext (JSON-encoded) on purpose: the adapter has no sec
 
 ### 5.5 The five operations in detail (`adapter/ops.cjs`)
 
-All five run inside one `BEGIN IMMEDIATE` transaction, and **all of them write**: even a `read` appends an audit event.
+Each op runs inside one `BEGIN IMMEDIATE` transaction, and **all of them write**: even a `read` appends an audit event. The one exception is `protected_read`. Its ML-KEM encapsulation is an async WebCrypto call, so it can't run inside the synchronous transaction helper. It uses two short transactions instead: (1) authorize and read the body; (2) after encapsulation, append the audit event. If (2) fails, the response is `deny` and the ciphertext is discarded, so an allow is never returned unless it was recorded.
 
 #### `setup`
 1. Validate (§5.3). Create `<dir>/kig/` if missing.

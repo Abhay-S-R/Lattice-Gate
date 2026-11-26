@@ -5,9 +5,9 @@ on:
   pull_request:
 
 jobs:
-  arm64:
-    # Judging runs on linux-arm64 with Node 24.11.1 (features D-17); test natively there.
-    runs-on: ubuntu-24.04-arm
+  x64:
+    # Judging runs on linux x86-64 (amd64) with Node 24.11.1 (features D-17).
+    runs-on: ubuntu-24.04
     container: node:24.11.1-bookworm
     timeout-minutes: 20
     steps:
@@ -36,7 +36,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: evidence-arm64-${{ github.sha }}
+          name: evidence-x64-${{ github.sha }}
           path: |
             evidence/
             evidence-ci.txt
@@ -44,9 +44,9 @@ jobs:
 
   judging-replica:
     # Same checks under the judging conditions the organizers described:
-    # linux/arm64 (native here, no emulation), Node 24.11.1, read-only root,
+    # linux/amd64, Node 24.11.1, Python 3.12 + pqcrypto, read-only root,
     # no network, non-root user, writable /tmp only (scripts/judge.cjs).
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
       TOOLKIT_DIR: toolkit
@@ -81,6 +81,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: evidence-replica-arm64-${{ github.sha }}
+          name: evidence-replica-x64-${{ github.sha }}
           path: evidence-replica/
           if-no-files-found: ignore

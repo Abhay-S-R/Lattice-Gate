@@ -71,13 +71,13 @@ Works the same on Windows (PowerShell, cmd, Git Bash), WSL, Linux and macOS. All
 - `npm test`: all tests (`node --test`).
 - `npm run compat`: runtime self-check.
 - `npm run validate`: the toolkit's `validate.py` against the root adapter (needs Python 3.10+; output saved to `evidence/`).
-- `npm run judge -- <cmd>`: runs `<cmd>` inside a replica of the judging container (linux/arm64, Node 24.11.1, read-only root, no network, writable `/tmp` only). Needs Docker Desktop. On x86 machines ARM is emulated: correct but slow, so never use its timings. Examples: `npm run judge -- node kig.cjs compat`, `npm run judge -- npm test`, `npm run judge -- node scripts/validate.cjs`.
+- `npm run judge -- <cmd>`: runs `<cmd>` inside a replica of the judging container (linux/amd64 like judging, Node 24.11.1, Python 3.12, read-only root, no network, non-root, writable `/tmp` only). Needs Docker Desktop. Native and fast on x86-64 machines; on ARM machines (e.g. Apple Silicon) Docker emulates x86, which is correct but slow, so never use its timings. Examples: `npm run judge -- node kig.cjs compat`, `npm run judge -- npm test`, `npm run judge -- node scripts/validate.cjs`.
 
-The judging container is Linux: the replica (and CI on native ARM64) is the source of truth, not a Windows run.
+The judging container is Linux: the replica (and CI, both x86-64) is the source of truth, not a Windows run.
 
 ## Testing
 
-`npm test` runs everything with Node's built-in runner (about 1 minute natively; about 16 minutes under emulated ARM64).
+`npm test` runs everything with Node's built-in runner (about 1 minute; similar inside the x86-64 replica).
 
 | Layer | Location | Covers |
 |---|---|---|

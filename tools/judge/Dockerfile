@@ -1,5 +1,5 @@
 # Replica of the organizer judging container (features D-17, P0-02):
-# Linux ARM64, Node.js 24.11.1, Python 3.12 + pqcrypto==0.4.0, offline,
+# Linux x86-64 (amd64), Node.js 24.11.1, Python 3.12 + pqcrypto==0.4.0, offline,
 # read-only root, writable temp only.
 # Built by scripts/judge.cjs with the repo as build context and the toolkit as a
 # named build context ("toolkit"), so it works the same from Windows, WSL and Linux

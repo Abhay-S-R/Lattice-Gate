@@ -1,10 +1,10 @@
 'use strict';
 // Run a command inside the judging-container replica (Windows, WSL, Linux, macOS):
-//   linux/arm64, Node 24.11.1, --read-only root, --network none, tmpfs /tmp,
+//   linux/amd64 (x86-64), Node 24.11.1, --read-only root, --network none, tmpfs /tmp,
 //   repo copied (not mounted) to /app, toolkit to /toolkit.
 // Usage: node scripts/judge.cjs <command...>    e.g. node scripts/judge.cjs node kig.cjs compat
-// Needs Docker (Docker Desktop on Windows/macOS). On x86 hosts arm64 is emulated:
-// correct but slow; never use its timings.
+// Needs Docker (Docker Desktop on Windows/macOS). Native on x86-64 hosts; on ARM hosts
+// (e.g. Apple Silicon) Docker emulates amd64: correct but slow, never use its timings.
 const path = require('node:path');
 const fs = require('node:fs');
 const { spawnSync } = require('node:child_process');
@@ -26,7 +26,7 @@ if (!fs.existsSync(path.join(TOOLKIT_DIR, 'validate.py'))) {
 const docker = (argv, opts = {}) => spawnSync('docker', argv, { stdio: 'inherit', ...opts });
 
 const build = docker([
-  'build', '--quiet', '--platform', 'linux/arm64',
+  'build', '--quiet', '--platform', 'linux/amd64',
   '-f', path.join(REPO, 'tools', 'judge', 'Dockerfile'),
   '--build-context', `toolkit=${TOOLKIT_DIR}`,
   '-t', IMAGE, REPO,
@@ -39,7 +39,7 @@ if (build.status !== 0) process.exit(build.status || 2);
 
 const run = docker([
   'run', '--rm', '-i',
-  '--platform', 'linux/arm64',
+  '--platform', 'linux/amd64',
   '--read-only',
   '--network', 'none',
   '--tmpfs', '/tmp:rw,exec,mode=1777',

@@ -10,7 +10,7 @@ const { spawnSync } = require('node:child_process');
 const { runAdapter, FAIL_LINE } = require('../helpers/run-adapter.cjs');
 const p = require('../../src/crypto/provider.cjs');
 
-const T = { timeout: 300000 }; // generous: arm64 is emulated in the judge replica
+const T = { timeout: 300000 }; // generous: covers slow CI runners and emulated replicas
 const hex = (n) => p.random(n).toString('hex');
 const freshDir = () => fs.mkdtempSync(path.join(os.tmpdir(), 'kig-contract-'));
 
@@ -218,7 +218,7 @@ test('read on corrupt db → deny exit 0; revoke → exit 1; setup quarantines',
 });
 
 test('no lingering handles (process exits promptly)', T, async () => {
-  // Baseline: a bare node that loads the same heavy built-ins. Emulated arm64 is slow,
+  // Baseline: a bare node that loads the same heavy built-ins. Emulated or loaded hosts are slow,
   // so compare against it rather than a fixed wall-clock budget.
   const t0 = Date.now();
   spawnSync(process.execPath, ['--disable-warning=ExperimentalWarning', '-e', "require('node:sqlite');require('node:crypto')"]);

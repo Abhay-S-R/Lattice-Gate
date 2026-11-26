@@ -15,6 +15,8 @@ const audit = require('../core/audit.cjs');
 const ids = require('../core/ids.cjs');
 const { authorizeOwnerRead } = require('../core/policy.cjs');
 const provider = require('../crypto/provider.cjs');
+const alerts = require('../core/alerts.cjs');
+const { hostileIds } = require('./validate.cjs');
 
 // ---------------------------------------------------------------- shared helpers
 
@@ -84,6 +86,7 @@ async function setup(ctx, req) {
     for (const actor of req.disabled) insRevoked.run(ids.enc(actor), epoch);
 
     audit.append(db, { gen, kind: 'setup', detail: { assets: assetIds.size, disabled: req.disabled.size } });
+    alerts.record(db, gen, { op: 'setup' }, { op: 'setup', hostile: hostileIds(req) });
     if (quarantined) {
       audit.append(db, {
         gen, kind: 'alert', rule: 'A-STATE-FAULT', detail: { severity: 'high', reason: 'quarantined' },
@@ -96,6 +99,18 @@ async function setup(ctx, req) {
 // ---------------------------------------------------------------- read (B, Task 1.9)
 
 const DENY = Object.freeze({ decision: 'deny' });
+
+/**
+ * Alerts for an access event that was just appended (Task 1.13). Never throws
+ * and never affects the decision (alerts.record uses a SAVEPOINT).
+ * @param {any} db @param {number} gen
+ * @param {{ op: string, request_id?: string|null, actor: string, asset: string }} ev
+ * @param {any} req validated req (for hostile IDs)
+ * @param {{ decision?: 'allow'|'deny', rule?: string, invalidKey?: boolean, invalidInput?: boolean }} c
+ */
+function accessAlerts(db, gen, ev, req, c) {
+  alerts.record(db, gen, ev, { op: ev.op, actor: ev.actor, asset: ev.asset, hostile: hostileIds(req), ...c });
+}
 
 /**
  * Open the store for a read-type op. Returns null when there is no store yet
@@ -127,6 +142,7 @@ async function read(ctx, req) {
     const a = authorizeOwnerRead(db, req.actor, req.asset);
     const ev = { gen, kind: 'access', op: 'read', request_id: req.request_id, actor: req.actor, asset: req.asset };
     audit.append(db, { ...ev, decision: a.decision, rule: a.rule });
+    accessAlerts(db, gen, ev, req, { decision: a.decision, rule: a.rule });
     return a.decision === 'allow' ? { decision: 'allow', body: a.body } : { ...DENY };
   }));
 }
@@ -150,6 +166,7 @@ async function revoke(ctx, req) {
     db.prepare(`INSERT INTO revoked_actors (actor, source, epoch)
       VALUES (?, 'revoke', ?) ON CONFLICT (actor) DO NOTHING`).run(ids.enc(req.actor), epoch);
     audit.append(db, { gen, kind: 'revoke', actor: req.actor });
+    alerts.record(db, gen, { op: 'revoke', actor: req.actor }, { op: 'revoke', hostile: hostileIds(req) });
   }));
   return {};
 }
@@ -178,6 +195,7 @@ async function auditOp(ctx, req) {
     audit.append(db, {
       gen, kind: 'audit_query', request_id: req.request_id, rule: decision ? 'hit' : 'audit_lookup_miss',
     });
+    alerts.record(db, gen, { op: 'audit', request_id: req.request_id }, { op: 'audit', hostile: hostileIds(req) });
     return decision;
   }));
   return { request_id: req.request_id, decision: found ?? 'deny' };
@@ -212,7 +230,10 @@ async function protectedRead(ctx, req) {
       const gen = currentGen(db);
       if (gen === 0) return null;
       const a = authorizeOwnerRead(db, req.actor, req.asset);
-      if (a.decision === 'deny') audit.append(db, { ...ev, gen, decision: 'deny', rule: a.rule });
+      if (a.decision === 'deny') {
+        audit.append(db, { ...ev, gen, decision: 'deny', rule: a.rule });
+        accessAlerts(db, gen, ev, req, { decision: 'deny', rule: a.rule });
+      }
       return a;
     });
     if (!first || first.decision === 'deny') return { ...DENY };
@@ -230,7 +251,9 @@ async function protectedRead(ctx, req) {
     } catch (e) {
       if (!(e instanceof provider.InvalidKeyError)) throw e;
       tx(db, () => {
-        audit.append(db, { ...ev, gen: currentGen(db), decision: 'deny', rule: 'invalid_public_key' });
+        const gen = currentGen(db);
+        audit.append(db, { ...ev, gen, decision: 'deny', rule: 'invalid_public_key' });
+        accessAlerts(db, gen, ev, req, { decision: 'deny', rule: 'invalid_public_key', invalidKey: true });
       });
       return { ...DENY };
     }
@@ -242,7 +265,10 @@ async function protectedRead(ctx, req) {
         const gen = currentGen(db);
         const a = gen === 0 ? null : authorizeOwnerRead(db, req.actor, req.asset);
         const ok = a !== null && a.decision === 'allow' && a.body === first.body;
-        audit.append(db, { ...ev, gen, decision: ok ? 'allow' : 'deny', rule: ok ? 'owner_allowed' : (a?.rule ?? 'no_state') });
+        const decision = ok ? 'allow' : 'deny';
+        const rule = ok ? 'owner_allowed' : (a?.rule ?? 'no_state');
+        audit.append(db, { ...ev, gen, decision, rule });
+        accessAlerts(db, gen, ev, req, { decision, rule });
         return ok;
       });
     } catch {
@@ -254,4 +280,36 @@ async function protectedRead(ctx, req) {
   }
 }
 
-module.exports = { setup, read, revoke, audit: auditOp, protectedRead, openAdapterDb, currentGen, bumpEpoch, using };
+// ---------------------------------------------------------------- invalid input (B, Tasks 1.13/1.14)
+
+/**
+ * Record a request that failed validation (§5.3, §5.7), best effort, only where
+ * a store already exists (nothing is created). read/protected_read get a deny
+ * access event with rule invalid_request, so `audit` can answer for its
+ * request_id; every op except setup ("state untouched") gets A-INVALID-INPUT.
+ * Only fields that are valid identifiers are passed in.
+ * @param {{ stateDir: string }} ctx
+ * @param {string} op
+ * @param {{ request_id?: string, actor?: string, asset?: string }} f
+ */
+async function recordInvalid(ctx, op, f) {
+  if (op === 'setup') return;
+  const db = openExisting(ctx);
+  if (!db) return;
+  using(db, () => tx(db, () => {
+    const gen = currentGen(db);
+    const ev = { op, request_id: f.request_id, actor: f.actor, asset: f.asset };
+    const c = { op, actor: f.actor, asset: f.asset, invalidInput: true, hostile: hostileIds(f) };
+    if (op === 'read' || op === 'protected_read') {
+      audit.append(db, { ...ev, gen, kind: 'access', decision: 'deny', rule: 'invalid_request' });
+      alerts.record(db, gen, ev, { ...c, decision: 'deny', rule: 'invalid_request' });
+    } else {
+      alerts.record(db, gen, ev, c);
+    }
+  }));
+}
+
+module.exports = {
+  setup, read, revoke, audit: auditOp, protectedRead,
+  recordInvalid, openAdapterDb, currentGen, bumpEpoch, using,
+};

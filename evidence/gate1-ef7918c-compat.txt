@@ -1,0 +1,12 @@
+INFO node v24.11.1 linux-x64 openssl 3.5.4 sqlite 3.50.4
+PASS hkdf-sha256 RFC 5869 TC1
+PASS aes-256-gcm round trip + tamper rejection
+PASS ml-kem-768 raw-public encapsulate/decapsulate
+PASS ml-kem-768 rejects invalid encapsulation key
+PASS ml-dsa-65 sign/verify with context separation
+PASS pkcs8 private key round trip (ml-dsa-65, ml-kem-768)
+PASS sqlite wal + strict tables
+PASS sqlite 8 processes x 25 chained appends
+PASS sqlite SIGKILL inside transaction leaves no partial row
+PASS sqlite VACUUM INTO copy readable
+PASS entry point stderr silent after warning suppression

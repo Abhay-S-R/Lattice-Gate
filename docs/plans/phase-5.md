@@ -3,7 +3,7 @@
 > **For agentic workers:** Follow the TDD loop for every task: write failing tests → run and verify FAIL → implement → run and verify PASS → commit. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Phase:** 5 of 7 (parallel track — depends only on Phase 0)
-**Branch:** `phase-5-detector` (cut from `main`, merged into `main` after Gate 5)
+**Branch:** `phase-5-detector` (cut from `main`, merged by PR after Gate 5)
 **Goal:** Build KIG's deterministic, explainable anomaly detector (privilege escalation, lateral movement, clock-skew & reordering handling) and its seeded synthetic benchmark, with CLI commands `kig detect` and `kig bench detect`.
 **Spec:**
 - `docs/features.md` v0.4: **P1-09** (Goal 6), **P1-10** (Goal 7), **P1-11** (Goal 8), **P1-18** (Goal 6 metrics), **D-09**
@@ -237,7 +237,7 @@ All commands must pass locally **and** inside `npm run judge -- ...` (linux/amd6
   - Same alert set for `lmWindowMs` = `30000`, `60000`, `120000`
 - [ ] `kig bench detect --seeds 101,102,103 --holdout 201,202,203,204,205` prints precision, recall, F1, median TTA (including watermark wait), false alerts per 1,000 benign events, and missed-evasion breakdown for the **held-out** seeds, and saves `evidence/detect-<ts>.json` (or prints cleanly on read-only FS)
 - [ ] Label-isolation static test passes (no detector module reads or imports `labels`)
-- [ ] `evidence/phase5.md` written and reviewed; `phase-5-detector` merged into `main`, x86-64 CI green
+- [ ] `evidence/phase5.md` written and reviewed; PR `phase-5-detector` → `main` green in x86-64 CI
 
 ---
 
@@ -518,7 +518,7 @@ All commands must pass locally **and** inside `npm run judge -- ...` (linux/amd6
   - Practice-set regression output (all 22 events, 2 alerts, window invariance 30–120 s)
   - Held-out benchmark table: precision, recall, F1 (incident-level and event-level separately), median TTA (including watermark wait), false alerts per 1,000 benign events, dataset size, and class distribution
   - Honest limitations: synthetic benchmark origin (not production traffic), evasive low-and-slow misses, ±5 s clock-offset range, watermark latency trade-off
-- [ ] **Step 4:** Run full `npm test` (and confirm x86-64 CI is green on `main` after the merge).
+- [ ] **Step 4:** Run full `npm test` (and confirm x86-64 CI green on PR `phase-5-detector` → `main`).
 - [ ] **Step 5:** Commit `docs(evidence): phase 5 detector regression and benchmark evidence`.
 
 ---

@@ -1,0 +1,55 @@
+{
+  "generated_at": "2026-11-26T19:57:45.434Z",
+  "seed": 2026,
+  "n": 100,
+  "clock": "process.hrtime.bigint shared host monotonic clock",
+  "nodes": {
+    "A": {
+      "first_denial_ms": {
+        "p50": 49.7739,
+        "p95": 65.619993,
+        "max": 80.647791
+      },
+      "signed_ack_ms": {
+        "p50": 38.113932,
+        "p95": 48.212769,
+        "max": 64.275352
+      }
+    },
+    "B": {
+      "first_denial_ms": {
+        "p50": 51.719312,
+        "p95": 66.588079,
+        "max": 80.515893
+      },
+      "signed_ack_ms": {
+        "p50": 39.347248,
+        "p95": 53.669588,
+        "max": 76.840443
+      }
+    },
+    "C": {
+      "first_denial_ms": {
+        "p50": 51.849797,
+        "p95": 69.217724,
+        "max": 81.570498
+      },
+      "signed_ack_ms": {
+        "p50": 39.157665,
+        "p95": 54.234411,
+        "max": 69.430259
+      }
+    }
+  },
+  "last_node": "C",
+  "partition": {
+    "node": "A",
+    "lease_ms": 5000,
+    "result": "lease_expired"
+  },
+  "limitations": [
+    "single-host run",
+    "benchmark uses temporary KIG_HOME",
+    "latency includes loopback HTTP and signed challenge probes"
+  ]
+}

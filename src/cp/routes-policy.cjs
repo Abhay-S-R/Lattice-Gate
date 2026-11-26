@@ -23,7 +23,8 @@ function routes(db, env = process.env) {
     return { status: 200, json: { snapshot: signed.snapshot, sig: signed.sig.toString('base64') } };
   };
   const ack = async (body) => {
-    if (!snapshots.recordAck(db, body, env)) return { status: 400, json: { error: 'bad_ack' } };
+    const arrivedMonoNs = process.hrtime.bigint().toString();
+    if (!snapshots.recordAck(db, body, env, arrivedMonoNs)) return { status: 400, json: { error: 'bad_ack' } };
     return { status: 200, json: { accepted: true } };
   };
   return [[ROUTES.cp.policyHead, head], [ROUTES.cp.policyPull, pull], [ROUTES.cp.policyAck, ack]];

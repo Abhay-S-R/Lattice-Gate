@@ -8,6 +8,10 @@ const ids = require('../core/ids.cjs');
 const { STORE_OPTIONS, storePath, withStore } = require('./store-arg.cjs');
 const { UsageError } = require('./main.cjs');
 const { safe, safeJson } = require('./text.cjs');
+const fs = require('node:fs');
+const path = require('node:path');
+const { openReadOnly } = require('../store/db.cjs');
+const contracts = require('../core/contracts.cjs');
 
 const SEVERITIES = new Set(['info', 'low', 'medium', 'high']);
 
@@ -25,9 +29,10 @@ function parseDetail(text) {
   return { severity, reason };
 }
 
-function toRecord(row) {
+function toRecord(row, source = undefined) {
   const { severity, reason } = parseDetail(row.detail);
   return {
+    ...(source ? { source } : {}),
     seq: Number(row.seq),
     time: Number.isSafeInteger(Number(row.ts_ms)) ? new Date(Number(row.ts_ms)).toISOString() : 'invalid-time',
     rule: typeof row.rule === 'string' ? row.rule : null,
@@ -44,25 +49,40 @@ function line(a) {
   const ids_ = [['actor', a.actor], ['asset', a.asset], ['request', a.request_id]]
     .filter(([, v]) => v !== null).map(([k, v]) => `${k}=${safe(v)}`).join(' ');
   const rule = /^[A-Z0-9-]+$/.test(String(a.rule)) ? a.rule : safe(a.rule);
-  return `#${a.seq} ${a.time} ${a.severity.padEnd(7)} ${rule}${ids_ ? ` ${ids_}` : ''} : ${safe(a.reason)}`;
+  return `#${a.seq} ${a.time} ${a.severity.padEnd(7)} ${a.source ? `${safe(a.source)} ` : ''}${rule}${ids_ ? ` ${ids_}` : ''} : ${safe(a.reason)}`;
 }
 
 module.exports = {
   name: 'alerts',
   describe: 'list self-monitoring alerts from an audit store, newest first',
-  usage: 'usage: node kig.cjs alerts (--adapter <stateDir> | --db <file>) [--json] [--limit N]',
+  usage: 'usage: node kig.cjs alerts [--adapter <stateDir> | --db <file>] [--json] [--limit N]',
   options: { ...STORE_OPTIONS, json: { type: 'boolean' }, limit: { type: 'string' } },
   async run({ values, io }) {
-    const file = storePath(values);
+    const file = values.db || values.adapter ? storePath(values) : null;
     let limit = -1;
     if (values.limit !== undefined) {
       if (!/^[1-9]\d{0,8}$/.test(values.limit)) throw new UsageError('--limit must be a positive integer');
       limit = Number(values.limit);
     }
-    const rows = withStore(file, (db) => db.prepare(
-      "SELECT seq, ts_ms, op, request_id, actor, asset, rule, detail FROM audit_events WHERE kind = 'alert' ORDER BY seq DESC LIMIT ?",
-    ).all(limit));
-    const records = rows.map(toRecord);
+    let records;
+    if (file) {
+      const rows = withStore(file, (db) => db.prepare("SELECT seq, ts_ms, op, request_id, actor, asset, rule, detail FROM audit_events WHERE kind = 'alert' ORDER BY seq DESC LIMIT ?").all(limit));
+      records = rows.map(toRecord);
+    } else {
+      const home = path.resolve(process.env.KIG_HOME || contracts.kigHome());
+      const stores = [['control-plane', contracts.layout(home).cp.db], ...contracts.NODE_IDS.map(id => [`node-${id}`, contracts.layout(home).node(id).db])];
+      const rows = [];
+      for (const [source, filename] of stores) {
+        if (!fs.existsSync(filename)) continue;
+        let db;
+        try { db = openReadOnly(filename); } catch { continue; }
+        try {
+          for (const row of db.prepare("SELECT seq, ts_ms, op, request_id, actor, asset, rule, detail FROM audit_events WHERE kind='alert'").all()) rows.push(toRecord(row, source));
+        } finally { db.close(); }
+      }
+      rows.sort((a, b) => b.time.localeCompare(a.time) || b.seq - a.seq);
+      records = limit < 0 ? rows : rows.slice(0, limit);
+    }
     if (values.json) { io.out(`${safeJson(records, 2)}\n`); return 0; }
     if (records.length === 0) { io.out('no alerts\n'); return 0; }
     io.out(`${records.map(line).join('\n')}\n`);

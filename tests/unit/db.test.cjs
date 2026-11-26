@@ -125,7 +125,7 @@ function runChild(p, i) {
   });
 }
 
-test('parallel create (cold-start race, 8 children x 20 rounds)', { timeout: 180000 }, async () => {
+test('parallel create (cold-start race, 8 children x 20 rounds)', { timeout: 1800000 }, async () => { // ~15x slower under emulated arm64
   const N = 8, ROUNDS = 20;
   for (let r = 0; r < ROUNDS; r++) {
     const p = path.join(tmpDir(), 'race.db');

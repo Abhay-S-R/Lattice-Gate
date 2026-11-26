@@ -37,6 +37,13 @@ function bumpEpoch(db) {
 
 const isUnusable = (e) => e instanceof StateError && (e.kind === 'corrupt' || e.kind === 'schema');
 
+/** Test-only: announce on stderr, then block forever (the caller SIGKILLs us). */
+function hangForTest() {
+  fs.writeSync(2, 'KIG_TEST_IN_TX\n');
+  const cell = new Int32Array(new SharedArrayBuffer(4));
+  for (;;) Atomics.wait(cell, 0, 0, 60000);
+}
+
 /** Run fn(db) and always close the DB. */
 function using(db, fn) {
   try { return fn(db); } finally { db.close(); }
@@ -167,6 +174,9 @@ async function revoke(ctx, req) {
       VALUES (?, 'revoke', ?) ON CONFLICT (actor) DO NOTHING`).run(ids.enc(req.actor), epoch);
     audit.append(db, { gen, kind: 'revoke', actor: req.actor });
     alerts.record(db, gen, { op: 'revoke', actor: req.actor }, { op: 'revoke', hostile: hostileIds(req) });
+    // Crash-test hook (Task 1.15, tests/crash/adapter-kill.test.cjs): hang with the
+    // transaction open so the test can SIGKILL us mid-commit. Test builds only.
+    if (process.env.NODE_ENV === 'test' && process.env.KIG_TEST_HANG_IN_TX === '1') hangForTest();
   }));
   return {};
 }

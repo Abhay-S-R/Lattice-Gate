@@ -24,7 +24,7 @@ test('compat.run() returns only passes on this machine', async () => {
 });
 
 test('node kig.cjs compat prints PASS lines, exits 0, stderr empty', () => {
-  const r = spawnSync(process.execPath, ['kig.cjs', 'compat'], { cwd: ROOT, encoding: 'utf8', timeout: 60000 });
+  const r = spawnSync(process.execPath, ['kig.cjs', 'compat'], { cwd: ROOT, encoding: 'utf8', timeout: 900000 });
   assert.equal(r.status, 0, r.stdout + r.stderr);
   assert.equal(r.stderr, '');
   const lines = r.stdout.trim().split('\n');

@@ -8,7 +8,7 @@
     "node": "24.11.1"
   },
   "scripts": {
-    "test": "node --disable-warning=ExperimentalWarning --test \"tests/**/*.test.cjs\"",
+    "test": "node --disable-warning=ExperimentalWarning --test --test-concurrency=1 \"tests/**/*.test.cjs\"",
     "compat": "node kig.cjs compat",
     "validate": "node scripts/validate.cjs",
     "judge": "node scripts/judge.cjs"

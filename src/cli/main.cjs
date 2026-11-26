@@ -27,9 +27,10 @@ const compat = {
 };
 
 /** @type {Map<string, any>} */
-const COMMANDS = new Map([
-  ['compat', compat],
-]);
+const COMMANDS = new Map();
+// Registered after the error classes exist (command modules import them from here).
+module.exports = { COMMANDS, UsageError, CommandError };
+for (const mod of [compat, require('./verify-log.cjs')]) COMMANDS.set(mod.name, mod);
 
 const stdio = {
   out: (/** @type {string} */ s) => process.stdout.write(s),
@@ -80,4 +81,4 @@ async function main(argv, { io = stdio, commands = COMMANDS } = {}) {
   }
 }
 
-module.exports = { main, COMMANDS, UsageError, CommandError, usage };
+Object.assign(module.exports, { main, usage });

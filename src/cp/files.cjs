@@ -82,4 +82,40 @@ function share(db, { file_id, account, home = contracts.kigHome() }) {
   registry.maybePublish(db);
   return { file_id, account };
 }
-module.exports = { publish, share, makeEnvelopes, distribute, fileAad, envelopeFields };
+/**
+ * Phase 4 (docs/plans/phase-4.md P4-D10): after a device is approved, issue it an envelope for the
+ * ACTIVE version of every file granted to its account. Only an active device is provisioned. If a
+ * rotation commits concurrently, its own COMMIT check (P4-D11) already guaranteed this device an
+ * envelope for the new version, so a version that moved on is skipped here.
+ * @returns {{file_id:string, version:number}[]}
+ */
+function provisionDevice(db, deviceId, home = contracts.kigHome()) {
+  const device = registry.getDevice(db, deviceId);
+  if (!device || device.status !== 'active') throw new Error('device_not_active');
+  const rows = db.prepare('SELECT f.file_id, f.active_version FROM files f JOIN grants g ON g.file_id=f.file_id WHERE g.account=? AND f.active_version>=1 ORDER BY f.file_id')
+    .all(ids.enc(device.account));
+  if (!rows.length) return [];
+  const master = provider.importPrivate(require('node:fs').readFileSync(contracts.layout(home).cp.keys.masterKem.key));
+  const issued = [];
+  for (const r of rows) {
+    const fileId = ids.dec(r.file_id), version = r.active_version;
+    const cust = db.prepare('SELECT wrap FROM custodian_wraps WHERE file_id=? AND version=?').get(r.file_id, version);
+    if (!cust) throw new Error('custodian_wrap_missing');
+    const dek = wrap.kemUnwrap(master, JSON.parse(cust.wrap), [fileId, version, 'cp']);
+    let done = false;
+    try {
+      done = tx(db, () => {
+        const now = db.prepare('SELECT active_version FROM files WHERE file_id=?').get(r.file_id);
+        const still = db.prepare("SELECT 1 FROM devices WHERE device_id=? AND status='active'").get(ids.enc(deviceId));
+        if (!now || now.active_version !== version || !still) return false;
+        db.prepare('INSERT OR REPLACE INTO envelopes(file_id,version,device_id,envelope) VALUES(?,?,?,?)')
+          .run(r.file_id, version, ids.enc(deviceId), JSON.stringify(wrap.serialize(wrap.kemWrap(device.kem_pk, dek, envelopeFields(fileId, version, device.account, deviceId)))));
+        audit.append(db, { gen: 0, kind: 'envelope_issued', op: 'device.provision', actor: deviceId, asset: fileId, decision: 'allow', rule: 'envelope_issued', detail: { version } });
+        return true;
+      });
+    } finally { dek.fill(0); }
+    if (done) { distribute(db, fileId, version, home); issued.push({ file_id: fileId, version }); }
+  }
+  return issued;
+}
+module.exports = { publish, share, makeEnvelopes, distribute, fileAad, envelopeFields, provisionDevice };

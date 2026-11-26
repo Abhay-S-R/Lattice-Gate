@@ -98,6 +98,27 @@ function openDb(path, { create, version, init }) {
 }
 
 /**
+ * Open an existing store read-only, for offline inspection (kig verify-log, alerts, checkpoint).
+ * Never creates the file; never writes. Any schema version is accepted (callers check what they need).
+ * @param {string} path
+ * @returns {DatabaseSync}
+ */
+function openReadOnly(path) {
+  if (!fs.existsSync(path)) throw new StateError('missing');
+  return withBusyRetry(() => {
+    let db;
+    try {
+      db = new DatabaseSync(path, { readOnly: true, timeout: BUSY_TIMEOUT_MS });
+      if (userVersion(db) === 0) throw new StateError('missing');
+      return db;
+    } catch (e) {
+      try { db?.close(); } catch { /* ignore */ }
+      throw e;
+    }
+  }, (e) => { throw new StateError('corrupt', e); });
+}
+
+/**
  * BEGIN IMMEDIATE → fn() → COMMIT; any throw → ROLLBACK and rethrow.
  * fn must be synchronous. Busy at BEGIN is retried; after BUSY_RETRIES → StateError('locked').
  * @template T
@@ -136,4 +157,4 @@ function quarantine(path) {
   return target;
 }
 
-module.exports = { StateError, openDb, tx, quarantine, isBusy };
+module.exports = { StateError, openDb, openReadOnly, tx, quarantine, isBusy };

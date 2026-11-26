@@ -2,10 +2,12 @@
 
 **Track:** 4 — Trust, but verify
 **Document:** features.md
-**Status:** Draft v0.4 — organizer answers folded in (ARM judging container, Round 1 = adapter only with hidden tests/exploits, Round 2 = CLI, Node 24.11.1 confirmed, WAL works); input-channel threat scope (D-15); strict contract response shapes (D-16); adapter self-monitoring moved to P0 (P0-10). v0.3: audit findings folded in.
+**Status:** Draft v0.5 — judging container corrected to x86-64 (was ARM). v0.4: organizer answers folded in (x86-64 judging container, Round 1 = adapter only with hidden tests/exploits, Round 2 = CLI, Node 24.11.1 confirmed, WAL works); input-channel threat scope (D-15); strict contract response shapes (D-16); adapter self-monitoring moved to P0 (P0-10). v0.3: audit findings folded in.
 **Purpose:** Define observable product behaviour before designing the architecture.
 
-**How to read v0.3.** Feature IDs are unchanged from v0.1 so existing cross-references still work. Items changed in v0.2 are tagged **[CHG]**, new in v0.2 **[NEW]**; items changed or added in v0.3 are tagged **[v0.3]**, in v0.4 **[v0.4]**. Section 0 is the decision record: what was decided, on what evidence, and what is still unverified. Nothing in Section 0 is a claim about the organizer's container; every measurement was taken in a stand-in environment described in Appendix A. Technology/runtime *details* (which built-in does what, module layout) belong in `architecture.md`; this document keeps only the runtime *decision* and its evidence.
+**How to read v0.3.** Feature IDs are unchanged from v0.1 so existing cross-references still work. Items changed in v0.2 are tagged **[CHG]**, new in v0.2 **[NEW]**; items changed or added in v0.3 are tagged **[v0.3]**, in v0.4 **[v0.4]**, in v0.5 **[v0.5]**.
+
+**[v0.5] Correction (2026-11-26): the organizers corrected the judging container to x86-64 (amd64), not ARM.** Everything below that said ARM64 now says x86-64; the replica and CI were switched to linux/amd64. No product code changed (pure JavaScript, no native modules). Section 0 is the decision record: what was decided, on what evidence, and what is still unverified. Nothing in Section 0 is a claim about the organizer's container; every measurement was taken in a stand-in environment described in Appendix A. Technology/runtime *details* (which built-in does what, module layout) belong in `architecture.md`; this document keeps only the runtime *decision* and its evidence.
 
 ---
 
@@ -76,7 +78,7 @@ A second, measured difference: given a 1184-byte ML-KEM public key consisting of
 | D-14 **[v0.3, CHG v0.4]** | **The adapter stores bodies in plaintext SQLite and makes no at-rest confidentiality claim.** The adapter has no secret that does not live in the same `TRACK4_STATE_DIR`, so encrypting bodies there would be theatre; under D-15 the state directory is outside the Round 1 attacker's reach anyway. `key_material` is never used as a key (P0-04). At-rest encryption with keys held outside the service (P1-02) is a demo/CLI capability. | Same reasoning as D-07: a key stored next to the ciphertext protects nothing from someone who can read both. Over-claiming here is a Threat-Model & Honesty deduction. |
 | D-15 **[v0.4]** | **Round 1 threat scope is the input channel.** The adapter's attacker controls the JSON on stdin (any value, any size up to the cap, any number of sequential or parallel invocations) and observes stdout, stderr, exit codes and timing. An attacker who can read or write `TRACK4_STATE_DIR` or the repository between invocations is **out of scope for the adapter** and is stated as such in the threat model. Consequences: no adapter at-rest encryption (D-14); no audit-chain verification on every adapter start (`kig verify-log` does it offline); fail-closed handling of a corrupt/missing database stays, because it is also crash safety. | Every hint in the toolkit points to the input channel: the contract's rules are about identifiers, diagnostics and disclosure; `validate.py` and its tests probe only leaks (including nested), marker exposure, error text, exit codes, timeouts and stream limits; the demo README says actor values are trusted inputs. A state-directory attacker cannot be stopped by anything inside the container (read-only root, no external secret), so effort there has a low ceiling. |
 | D-16 **[v0.4]** | **Adapter responses use exactly the contract shapes, no extra fields.** `setup` → `{"ready":true}`; `read` → `{"decision":"allow","body":…}` or `{"decision":"deny"}`; `revoke` → `{}`; `audit` → `{"request_id":…,"decision":…}`; `protected_read` → `{"ciphertext":…,"proof":…}` or `{"decision":"deny"}`; unsupported → `{"error":"unsupported_operation"}`. | Hidden tests may compare responses strictly; extra fields add risk and can leak policy structure. Rich detail lives in the audit log and CLI. |
-| D-17 **[v0.4]** | **Two rounds, two surfaces.** Round 1 (automated: hidden test cases and exploits) runs only the repository-root adapter on an **ARM (aarch64)** Linux container with Node 24.11.1. Round 2 (judges) is presented through our `kig` CLI. | Organizer answers, 2026-11-26. S1 is the Round 1 deliverable; P1 is primarily Round 2 evidence. |
+| D-17 **[v0.4]** | **Two rounds, two surfaces.** Round 1 (automated: hidden test cases and exploits) runs only the repository-root adapter on an **x86-64 (amd64)** Linux container with Node 24.11.1 **[v0.5: corrected from ARM]**. Round 2 (judges) is presented through our `kig` CLI. | Organizer answers, 2026-11-26. S1 is the Round 1 deliverable; P1 is primarily Round 2 evidence. |
 
 ---
 
@@ -150,12 +152,12 @@ Dev/test-only dependency: Python 3.12 + `pqcrypto==0.4.0`, used solely by the cr
 Acceptance: `validate.py` can start the root adapter repeatedly; every valid request produces one parseable JSON object; stderr is empty on the success path; **[v0.3]** an injected internal error in `read`, `protected_read` and `audit` yields deny/exit 0, and in `revoke` yields non-zero exit with no state change.
 
 ### P0-02. Runtime and dependency compatibility
-- Target the exact organizer runtime: Node.js 24.11.1 on offline Linux, **[v0.4] ARM64 (aarch64)**. The official `node-v24.11.1-linux-arm64` build exists (verified). All Appendix A measurements were taken on x86-64; `kig compat` and the performance numbers that go into the brief must be re-run on ARM64.
+- Target the exact organizer runtime: Node.js 24.11.1 on offline Linux, **[v0.5] x86-64 (amd64)** (corrected from ARM64). Appendix A measurements were taken on x86-64, the judging architecture; `kig compat` and the brief's performance numbers are re-run in the x86-64 replica and CI.
 - **[CHG]** `kig compat` re-runs the Appendix-A spike (ML-KEM raw-public import/encaps/decaps, ML-DSA-65 sign/verify with context, AES-GCM, HKDF with the RFC 5869 vector, HMAC, SQLite writes from separate processes, `kill -9` atomicity) and prints PASS/FAIL without secret material.
-- CI runs `kig compat` and the full test suite inside a `node:24.11.1` container, not only on developer machines. **[v0.4]** The CI job runs on a native ARM64 runner (e.g. GitHub `ubuntu-24.04-arm`); emulated ARM (QEMU) is acceptable for correctness only, never for timing.
+- CI runs `kig compat` and the full test suite inside a `node:24.11.1` container, not only on developer machines. **[v0.5]** CI runs on GitHub `ubuntu-24.04` (x86-64), both plain and inside the judging replica (read-only root, offline, non-root).
 - Do not assume the organizer installs anything from `package.json`; there is no `package.json` dependency list to install.
 
-Acceptance: compatibility test passes in the pinned container on ARM64.
+Acceptance: compatibility test passes in the pinned container on x86-64.
 
 ### P0-03. Persistent state across process invocations
 - Use `TRACK4_STATE_DIR` when supplied, otherwise `os.tmpdir()`. The directory is created if missing, by `setup` or **[v0.4]** by a `revoke` that arrives before any `setup` (a revocation must always be persisted before it is acknowledged).
@@ -504,7 +506,7 @@ Design text is not evidence. The evidence-sheet status must reflect the result a
 
 ## 9. Build order, gates and scope risk **[NEW]**
 
-How the scoring maps to the work. **[v0.4]** Organizers confirmed that Round 1 runs only the repository-root adapter, with hidden test cases and exploits, on an ARM container; Round 2 is judged through our CLI (D-17).
+How the scoring maps to the work. **[v0.4]** Organizers confirmed that Round 1 runs only the repository-root adapter, with hidden test cases and exploits, on an x86-64 container ([v0.5] corrected from ARM); Round 2 is judged through our CLI (D-17).
 
 | Stage 1 criterion | Largely decided by |
 |---|---|
@@ -518,7 +520,7 @@ Only the top 10 teams reach the desk review (live demo, technical questions, liv
 
 Vertical slices, each with a gate:
 1. **S0** `kig compat` + repo skeleton + CI in the pinned container. *Gate:* compat passes.
-2. **S1** P0 complete (**[v0.4] the Round 1 deliverable**, including P0-10 alerts). *Gate:* `validate.py` exits 0 on ARM64; protected-read interop (25/25); negative suite (including the [v0.3] prototype-key, strict-Base64 and exit-code cases); concurrent-process tests (warm **and** cold-start, P0-03) and `kill -9` tests.
+2. **S1** P0 complete (**[v0.4] the Round 1 deliverable**, including P0-10 alerts). *Gate:* `validate.py` exits 0 on x86-64 in the judging replica; protected-read interop (25/25); negative suite (including the [v0.3] prototype-key, strict-Base64 and exit-code cases); concurrent-process tests (warm **and** cold-start, P0-03) and `kill -9` tests.
 3. **S2** Audit chain, checkpoints, `verify-log` (everything else logs through it).
 4. **S3** Device identity, enrolment, envelopes, lost-device flow.
 5. **S4** Rotation, three-node revocation, lease, measurements.
@@ -534,13 +536,13 @@ Cut order if time runs short: P2 items, then detector graph extras beyond LM-1/L
 ---
 
 ## 10. Questions for organizers
-**[v0.4] Answers received 2026-11-26:** container is ARM; Round 1 runs our repository entry point only (no CLI/GUI) with hidden test cases and exploits; Round 2 is judged through our CLI; the AI/ML ban means components in the code, AI-assisted development is fine; Node pinned at 24.11.1; assume SQLite WAL works; response JSON shapes are ours to decide; team capacity to be confirmed.
+**[v0.4] Answers received 2026-11-26:** container is x86-64 (first reported as ARM, corrected the same day); Round 1 runs our repository entry point only (no CLI/GUI) with hidden test cases and exploits; Round 2 is judged through our CLI; the AI/ML ban means components in the code, AI-assisted development is fine; Node pinned at 24.11.1; assume SQLite WAL works; response JSON shapes are ours to decide; team capacity to be confirmed.
 
 - **Q1 (open).** Does the official worker call `setup` more than once against the same container/state directory (several scenarios)? D-01 handles both cases, so this is no longer a blocker.
 - ~~**Q2.**~~ **Answered:** response shapes are ours to decide → D-02, D-03, D-16.
 - ~~**Q2b.**~~ **Answered (ours to decide):** D-13 stands; we assume a strict worker.
 - **Q3 (open, low priority).** What does the worker do with `threat-model.json` — is a mismatch penalised, and are values other than the example recognised? Until answered, P0-09 applies (omit or only defensible values).
-- ~~**Q4.**~~ **Answered:** ARM; WAL works. Persistence of the temp directory across invocations is implied by the contract ("state that must survive between calls in the same container").
+- ~~**Q4.**~~ **Answered:** x86-64 (corrected from ARM); WAL works. Persistence of the temp directory across invocations is implied by the contract ("state that must survive between calls in the same container").
 - ~~**Q5.**~~ **Answered:** Round 1 adapter only; Round 2 through the CLI.
 - ~~**Q6.**~~ **Answered [v0.3]:** the `BUTTERFINGERS7498/trust-but-verify-toolkit` v1.0.0 ZIP and `ScalerOpenSourceLabs/Track-4-Toolkit` commit `8901dfb` are identical apart from CRLF line endings. No need to ask.
 - ~~**Q7.**~~ **Answered:** Node 24.11.1.
@@ -601,6 +603,6 @@ Cut order if time runs short: P2 items, then detector graph extras beyond LM-1/L
 | R12 | Lateral-movement rules simulated on `practice/events.csv` (corrected time, 60 s) | LM-1 per-actor cold start fires on `evt-007..009` and `evt-010..012`; global cold start only `evt-010..012` (margin 6 s); LM-3 N=2 fires on `evt-017/018`; N=3 only `evt-010..012` → P1-10 changes |
 | R13 | Whole-process latency, 40 runs (WSL is slower than the first sandbox) | Node empty p50 45 ms; Node with sqlite + ML-KEM encaps p50 55 ms / p95 59 ms; Python empty 29 ms; Python with pqcrypto + sqlite + encaps p50 35 ms / p95 42 ms. Gap consistent with item 17; informational |
 
-**[v0.4] All Appendix A results are from x86-64. The judging container is ARM64; they must be re-run there (P0-02).**
+**[v0.5] All Appendix A results are from x86-64, which is the judging architecture.**
 
-**Not tested, and therefore not claimed:** the organizer's actual judging container (ARM64 per organizers; filesystem, tmpfs/WAL behaviour, read-only root); the official worker's behaviour; Node 24.11.1 under a read-only root filesystem; Node ↔ `pqcrypto` ML-DSA signature interoperability (not required by the adapter contract); multi-node simulation; any detection metric.
+**Not tested, and therefore not claimed:** the organizer's actual judging container (x86-64 per organizers; filesystem, tmpfs/WAL behaviour, read-only root); the official worker's behaviour; Node 24.11.1 under a read-only root filesystem; Node ↔ `pqcrypto` ML-DSA signature interoperability (not required by the adapter contract); multi-node simulation; any detection metric.

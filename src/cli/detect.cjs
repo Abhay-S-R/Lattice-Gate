@@ -7,7 +7,6 @@
 // Every value from the input is escaped before it reaches the terminal.
 // Exit: 0 success, 2 bad arguments or unreadable/invalid input.
 
-const { parseArgs } = require('node:util');
 const { detect } = require('../detect/index.cjs');
 const { loadEventsFile } = require('../detect/ingest.cjs');
 const { loadApprovalsFile } = require('../detect/approvals.cjs');
@@ -22,7 +21,6 @@ const options = /** @type {const} */ ({
   'window-ms': { type: 'string' },
   'max-offset-ms': { type: 'string' },
   json: { type: 'boolean', default: false },
-  help: { type: 'boolean', short: 'h', default: false },
 });
 
 const USAGE = 'usage: node kig.cjs detect --events <file.csv|file.jsonl> [--approvals <approvals.json>] '
@@ -89,7 +87,6 @@ function render(r, rejects) {
 
 /** @param {any} values parsed options @returns {Promise<number>} */
 async function run(values) {
-  if (values.help) { process.stdout.write(USAGE); return 0; }
   try {
     if (!values.events) throw new UsageError('--events is required');
     const cfg = { lmWindowMs: intOpt(values['window-ms'], 'window-ms'), maxOffsetMs: intOpt(values['max-offset-ms'], 'max-offset-ms') };
@@ -108,16 +105,4 @@ async function run(values) {
   }
 }
 
-/** @param {string[]} argv @returns {Promise<number>} */
-async function main(argv) {
-  let values;
-  try {
-    ({ values } = parseArgs({ args: argv, options, strict: true, allowPositionals: false }));
-  } catch (e) {
-    process.stderr.write(`kig detect: ${safe(/** @type {Error} */ (e).message)}\n${USAGE}`);
-    return 2;
-  }
-  return run(values);
-}
-
-module.exports = { name, describe, options, run, main, safe, safeJson };
+module.exports = { name, describe, options, USAGE, run, safe, safeJson };

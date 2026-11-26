@@ -11,7 +11,6 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { parseArgs } = require('node:util');
 const { runBenchmark } = require('../detect/bench.cjs');
 
 const name = 'bench detect';
@@ -22,7 +21,6 @@ const options = /** @type {const} */ ({
   'warmup-seed': { type: 'string' },
   out: { type: 'string' },
   json: { type: 'boolean', default: false },
-  help: { type: 'boolean', short: 'h', default: false },
 });
 const USAGE = 'usage: node kig.cjs bench detect --seeds <tuning, e.g. 101,102,103> --holdout <held-out, e.g. 201-205> '
   + '[--warmup-seed <n>] [--out <report.json>] [--json]\n';
@@ -66,7 +64,6 @@ function summarize(label, s) {
 
 /** @param {any} values @returns {Promise<number>} */
 async function run(values) {
-  if (values.help) { process.stdout.write(USAGE); return 0; }
   let report;
   try {
     const tuningSeeds = parseSeeds(values.seeds, 'seeds');
@@ -103,16 +100,4 @@ async function run(values) {
   return 0;
 }
 
-/** @param {string[]} argv @returns {Promise<number>} */
-async function main(argv) {
-  let values;
-  try {
-    ({ values } = parseArgs({ args: argv, options, strict: true, allowPositionals: false }));
-  } catch (e) {
-    process.stderr.write(`kig bench detect: ${/** @type {Error} */ (e).message.replace(/[^\x20-\x7e]/g, '?')}\n${USAGE}`);
-    return 2;
-  }
-  return run(values);
-}
-
-module.exports = { name, describe, options, run, main, parseSeeds };
+module.exports = { name, describe, options, USAGE, run, parseSeeds };

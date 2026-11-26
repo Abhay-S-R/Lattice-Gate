@@ -5,9 +5,9 @@ on:
   pull_request:
 
 jobs:
-  arm64:
-    # Judging runs on linux-arm64 with Node 24.11.1 (features D-17); test natively there.
-    runs-on: ubuntu-24.04-arm
+  x64:
+    # Judging runs on linux x86-64 (amd64) with Node 24.11.1 (features D-17).
+    runs-on: ubuntu-24.04
     container: node:24.11.1-bookworm
     timeout-minutes: 20
     steps:
@@ -30,16 +30,57 @@ jobs:
         run: npm test
 
       - name: Toolkit validator against root adapter
-        # Non-blocking until the adapter is wired (Task 1.14); then remove continue-on-error.
-        continue-on-error: true
         run: TOOLKIT_DIR=toolkit node scripts/validate.cjs
 
       - name: Upload evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: evidence-arm64-${{ github.sha }}
+          name: evidence-x64-${{ github.sha }}
           path: |
             evidence/
             evidence-ci.txt
+          if-no-files-found: ignore
+
+  judging-replica:
+    # Same checks under the judging conditions the organizers described:
+    # linux/amd64, Node 24.11.1, Python 3.12 + pqcrypto, read-only root,
+    # no network, non-root user, writable /tmp only (scripts/judge.cjs).
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      TOOLKIT_DIR: toolkit
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Organizer toolkit (pinned)
+        uses: actions/checkout@v4
+        with:
+          repository: ScalerOpenSourceLabs/Track-4-Toolkit
+          ref: 8901dfbdbfe048853e0bfa25b60583d1e6617a63
+          path: toolkit
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.11.1
+
+      # GitHub's default bash runs with -eo pipefail, so `| tee` keeps the step's exit status.
+      - name: Evidence folder
+        run: mkdir -p evidence-replica && echo "commit ${GITHUB_SHA} runner ${RUNNER_ARCH} $(date -u +%FT%TZ)" > evidence-replica/run.txt
+
+      - name: kig compat (replica)
+        run: node scripts/judge.cjs node kig.cjs compat 2>&1 | tee evidence-replica/compat.txt
+
+      - name: Tests (replica)
+        run: node scripts/judge.cjs npm test 2>&1 | tee evidence-replica/npm-test.txt
+
+      - name: Toolkit validator (replica)
+        run: node scripts/judge.cjs node scripts/validate.cjs 2>&1 | tee evidence-replica/validate.txt
+
+      - name: Upload replica evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidence-replica-x64-${{ github.sha }}
+          path: evidence-replica/
           if-no-files-found: ignore

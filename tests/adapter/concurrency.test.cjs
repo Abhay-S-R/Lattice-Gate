@@ -13,10 +13,10 @@ const ids = require('../../src/core/ids.cjs');
 const { withState } = require('../helpers/state.cjs');
 
 const N = 8, ROUNDS = 20;
-// Under emulated arm64 (judge replica) each process costs ~1 s; natively ~0.1 s.
+// Under CPU emulation each process can cost ~1 s; natively ~0.1 s.
 const T = { timeout: 1800000 };
 const freshDir = () => fs.mkdtempSync(path.join(os.tmpdir(), 'kig-conc-'));
-// Hang guard per process, not a performance budget: 8 emulated-arm64 processes
+// Hang guard per process, not a performance budget: 8 emulated processes
 // starting together can take ~8 s each in the judge replica. Natively a round is < 1 s.
 const PER_CALL_MS = 120000;
 

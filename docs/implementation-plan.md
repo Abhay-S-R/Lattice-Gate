@@ -10,7 +10,7 @@
 
 See `architecture.md` §1.
 
-**Tech stack:** Node.js 24.11.1 built-ins only (`node:crypto`, `node:sqlite`, `node:fs`, `node:http`, `node:child_process`, `node:test`). No npm dependencies. CommonJS. Dev-only: Python 3.12 + `pqcrypto==0.4.0` (interop test), Docker, and GitHub Actions on ARM64.
+**Tech stack:** Node.js 24.11.1 built-ins only (`node:crypto`, `node:sqlite`, `node:fs`, `node:http`, `node:child_process`, `node:test`). No npm dependencies. CommonJS. Dev-only: Python 3.12 + `pqcrypto==0.4.0` (interop test), Docker, and GitHub Actions (x86-64).
 
 **Spec:**
 - `docs/features.md` v0.4 (what and why: D-01 to D-17, P0-xx/P1-xx)
@@ -23,7 +23,7 @@ See `architecture.md` §1.
 
 | Phase | Name | Round | Depends on | Why it sits here |
 |---|---|---|---|---|
-| **0** | Foundation and test environments | both | n/a | Nothing is trustworthy until the crypto works on **ARM64** and we can rehearse the judging container. Cheap, and it removes the biggest unknown first. |
+| **0** | Foundation and test environments | both | n/a | Nothing is trustworthy until the crypto works on the judging platform (**x86-64**, corrected from ARM) and we can rehearse the judging container. Cheap, and it removes the biggest unknown first. |
 | **1** | Round 1 adapter (S1) | 1 | 0 | Round 1 decides whether anyone ever sees Round 2. It is the only thing the automated stage runs. It is also the smallest complete product, and it builds the shared core every later phase reuses. |
 | **2** | Audit verification and CLI skeleton (S2) | 2 | 1 | Every later component logs through the audit chain. Verifying it early means later phases get tamper evidence for free. It is also the first CLI command the judges will use. |
 | **3** | Control plane, nodes, devices, files, revocation (S3 + revocation half of S4) | 2 | 2 | The Round 2 backbone. Goals 2 and 5, and everything in Phase 4, need enrolled devices, signed snapshots and three nodes. |
@@ -57,7 +57,7 @@ See `architecture.md` §1.
 
 Every task implicitly includes these. Values are copied from the spec.
 
-- Runtime **Node.js 24.11.1**; judging is **linux-arm64**, offline, with a read-only root and only the temp dir writable (D-17, P0-02).
+- Runtime **Node.js 24.11.1**; judging is **linux x86-64 (amd64)**, offline, with a read-only root and only the temp dir writable (D-17, P0-02).
 - **Zero npm dependencies.** `package.json` has no `dependencies` or `devDependencies`. Only `node:*` built-ins are allowed.
 - CommonJS `.cjs` only; no build step.
 - Only `src/crypto/provider.cjs` may `require('node:crypto')` (architecture §1.3). Enforced by a test in Task 0.2.
@@ -134,7 +134,7 @@ tests/crash/*.test.cjs tests/interop/*                                          
 tools/judge/Dockerfile           judging-container replica                       (0.4)
 scripts/judge.sh                 run anything inside the replica                 (0.4)
 scripts/validate.sh              toolkit validate.py against root adapter        (0.5)
-.github/workflows/ci.yml         ARM64 CI                                        (0.4)
+.github/workflows/ci.yml         x86-64 CI                                        (0.4)
 evidence/                        validator output, bench results, evidence sheet
 ```
 
@@ -142,7 +142,7 @@ evidence/                        validator output, bench results, evidence sheet
 
 # Phase 0: Foundation and test environments
 
-**Gate 0:** `node kig.cjs compat` prints all PASS on the GitHub `ubuntu-24.04-arm` runner inside `node:24.11.1`; `scripts/judge.sh node kig.cjs compat` passes locally under emulated arm64; `scripts/validate.sh` runs (behaviour checks may fail, because the stub isn't wired yet).
+**Gate 0:** `node kig.cjs compat` prints all PASS in CI (`ubuntu-24.04`) inside `node:24.11.1`; `npm run judge -- node kig.cjs compat` passes locally in the x86-64 replica; `scripts/validate.sh` runs (behaviour checks may fail, because the stub isn't wired yet).
 
 ### Task 0.1: Repository skeleton
 
@@ -236,7 +236,7 @@ Checks:
 - [ ] **Step 4:** Run `node kig.cjs compat`. Expected: all PASS, exit 0.
 - [ ] **Step 5:** Commit `feat(cli): kig compat`.
 
-### Task 0.4: Judging-container replica and ARM CI
+### Task 0.4: Judging-container replica and CI
 
 **Files:**
 - Create: `tools/judge/Dockerfile`, `scripts/judge.sh`, `.github/workflows/ci.yml`
@@ -244,14 +244,14 @@ Checks:
 **Interfaces:**
 - Produces: `sh scripts/judge.sh <cmd…>` runs `<cmd…>` inside the replica (`/app` = repo, read-only; `/toolkit` = toolkit, read-only; `/tmp` = tmpfs).
 - [ ] **Step 1:** Write the Dockerfile `FROM node:24.11.1-bookworm-slim`, installing `python3` (needed only for `validate.py`). Use a non-root `USER node`.
-- [ ] **Step 2:** Write `scripts/judge.sh`. It builds the image once with `--platform linux/arm64` (tag `kig-judge`), then runs `docker run --rm --platform linux/arm64 --read-only --network none --tmpfs /tmp:rw,exec -v "$REPO":/app:ro -v "$TOOLKIT_DIR":/toolkit:ro -w /app kig-judge "$@"`. `TOOLKIT_DIR` defaults to `../Track-4-Toolkit`.
+- [ ] **Step 2:** Write `scripts/judge.sh`. It builds the image once with `--platform linux/amd64` (tag `kig-judge`), then runs `docker run --rm --platform linux/amd64 --read-only --network none --tmpfs /tmp:rw,exec -v "$REPO":/app:ro -v "$TOOLKIT_DIR":/toolkit:ro -w /app kig-judge "$@"`. `TOOLKIT_DIR` defaults to `../Track-4-Toolkit`.
 - [ ] **Step 3:** Write `ci.yml`:
-  - `runs-on: ubuntu-24.04-arm`, `container: node:24.11.1`
+  - `runs-on: ubuntu-24.04`, `container: node:24.11.1`
   - steps: checkout; checkout `ScalerOpenSourceLabs/Track-4-Toolkit` at `8901dfb` into `toolkit/`
   - `node kig.cjs compat`; `npm test`; `python3 toolkit/validate.py --entry ./track4_service.cjs` (from Task 0.5 on); install `pqcrypto==0.4.0` and run the interop test (from Task 1.16 on)
   - upload `evidence/` as an artifact
-- [ ] **Step 4:** Run `sh scripts/judge.sh node kig.cjs compat` locally. Expected: all PASS (emulated ARM; slow is fine). Push the branch; expected: CI green on ARM.
-- [ ] **Step 5:** Commit `ci: arm64 judging replica and workflow`.
+- [ ] **Step 4:** Run `sh scripts/judge.sh node kig.cjs compat` locally. Expected: all PASS. Push the branch; expected: CI green.
+- [ ] **Step 5:** Commit `ci: judging replica and workflow`.
 
 ### Task 0.5: Toolkit hookup
 
@@ -268,7 +268,7 @@ Checks:
 
 **Spec:** features P0-01 to P0-10, D-01 to D-04, D-13 to D-16; architecture §4 and §5.
 
-**Gate 1, all inside `scripts/judge.sh` (arm64), plus green ARM CI:**
+**Gate 1, all inside the judging replica (`npm run judge -- …`, x86-64), plus green CI:**
 1. `sh scripts/validate.sh` → `Local scenario passed.`, exit 0, saved to `evidence/`
 2. `npm test` → all pass (unit, adapter, negative, concurrency including cold start ×20, crash)
 3. interop 25/25 (Task 1.16)
@@ -657,7 +657,7 @@ After Gate 1 the adapter is frozen.
   - `cold`: an empty dir with 8 parallel `revoke`s of distinct actors, ×20 rounds
   - Expected each round: all exit 0, every revoke row present, `verifyChain` ok.
 - [ ] **Step 3: `adapter-kill.test.cjs`.** Start a child holding an open transaction mid-`revoke` (test hook env `KIG_TEST_HANG_IN_TX=1`, read only inside `ops.revoke` and only when `NODE_ENV==='test'`), `SIGKILL` it, then: no partial row, chain valid, the next `read` works.
-- [ ] **Step 4:** Run `npm test`. Expected: all PASS. Run `sh scripts/judge.sh npm test`. Expected: PASS on arm64.
+- [ ] **Step 4:** Run `npm test`. Expected: all PASS. Run `sh scripts/judge.sh npm test`. Expected: PASS in the replica.
 - [ ] **Step 5:** Commit `test(adapter): negative, concurrency and crash suites`.
 
 ### Task 1.16: `pqcrypto` interop
@@ -775,7 +775,7 @@ Each task follows the same TDD loop: failing test → implement → pass → com
 
 | Task | Deliverable | Acceptance |
 |---|---|---|
-| **7.1 Performance** | `src/cli/bench.cjs`: p50/p95 for each adapter op (whole process) and in-process ops per P1-20; sizes; DB growth. Runs in ARM CI and writes `evidence/bench-arm64-<commit>.json` | numbers come from native ARM, never emulation; runtime, host and seed recorded |
+| **7.1 Performance** | `src/cli/bench.cjs`: p50/p95 for each adapter op (whole process) and in-process ops per P1-20; sizes; DB growth. Runs in the x86-64 replica/CI and writes `evidence/bench-x64-<commit>.json` | numbers come from native x86-64, never emulation; runtime, host and seed recorded |
 | **7.2 `kig demo`** | `src/cli/demo.cjs`: the 12 steps in architecture §17.2, narrated, PASS/FAIL per step, seeded | runs from a clean `KIG_HOME` in < 3 minutes; a stranger can run it from the README |
 | **7.3 Evidence sheet** | `evidence/evidence-sheet.md` from the toolkit template: one row per goal, statuses `measured`/`partial`/`not tested`/`not supported`, linked artifacts, expected results written before the runs | Goal 12 = `not supported`; nothing marked `measured` without an artifact |
 | **7.4 README (final)** | clean-machine setup on Linux/macOS/WSL, Round 1 and Round 2 usage, the dependency statement, test commands, limits | a teammate follows it on a fresh machine with no help |
@@ -794,7 +794,7 @@ Each task follows the same TDD loop: failing test → implement → pass → com
   | P0-01..P0-10 | Phase 1 tasks 1.1–1.17 (P0-09 by 1.17 plus not shipping `threat-model.json`) |
   | P1-01..P1-21 | Phases 2–7 (P1-16 by the 6.2 negative test) |
   | D-01..D-17 | Pinned in the Phase 1 tests (D-01 in 1.8/1.10, D-02/03 in 1.11, D-04 in 1.1, D-13 in 1.14, D-16 in the "exactly N keys" tests) |
-  | Architecture §20 checks | V1 → 0.3 on ARM; V2 → 0.2; V4 → 0.3; V5/V6 → 1.14 and 1.15 under `judge.sh`; V7 → 7.1 |
+  | Architecture §20 checks | V1 → 0.3 in the x86-64 replica; V2 → 0.2; V4 → 0.3; V5/V6 → 1.14 and 1.15 under `judge.sh`; V7 → 7.1 |
 
 - **Type consistency:** `handleRaw`, `runAdapter`, `openDb`/`tx`/`StateError`, `audit.append`/`verifyChain`/`latestAccessDecision`/`countRecentDenies`, `authorizeOwnerRead`, `evaluate`/`appendAlerts` and `kemEncapsulateRaw` have the same names wherever they are consumed.
 - **Proportion:** Phases 0–1 are detailed to the step, because they ship first and are frozen at Gate 1. Phases 2–7 are pinned to files, interfaces and acceptance tests. **Before starting each of them, expand it into its own step-level plan** (`docs/plans/phase-N.md`) using the same format as Phase 1.

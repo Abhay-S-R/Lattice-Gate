@@ -2,7 +2,7 @@
 
 This splits **Phase 1 (Round 1 adapter)** of `docs/implementation-plan.md` between two developers. Task details, interfaces and tests are in the plan, so this file does not repeat them. It covers **who does what, in what order, and where the two meet**. If this file and the plan disagree, the plan wins (and the spec wins over the plan).
 
-**Precondition:** Gate 0 has passed. `src/crypto/provider.cjs`, `kig compat`, `scripts/judge.sh`, `scripts/validate.sh` and ARM CI are all on `main`.
+**Precondition:** Gate 0 has passed. `src/crypto/provider.cjs`, `kig compat`, `scripts/judge.cjs`, `scripts/validate.cjs` and CI are all on `main`.
 
 ---
 
@@ -17,9 +17,9 @@ This splits **Phase 1 (Round 1 adapter)** of `docs/implementation-plan.md` betwe
   | `npm test` | All `*.test.cjs` suites |
   | `npm run compat` | `kig compat` crypto/runtime checks |
   | `npm run validate` | Toolkit `validate.py` against the root adapter |
-  | `npm run judge -- <command>` | Runs `<command>` inside the arm64 judging replica, for example `npm run judge -- npm test` |
+  | `npm run judge -- <command>` | Runs `<command>` inside the x86-64 judging replica, for example `npm run judge -- npm test` |
 
-- **One judge run takes about 1.5 minutes,** because ARM is emulated on x86. Run it **before opening a PR**, not on every change. For the inner loop, use `node --test <file>`.
+- **A judge run is native on x86-64 machines** (the judging platform), so it is about as fast as a normal run. Still run it **before opening a PR**. For the inner loop, use `node --test <file>`.
 
 ---
 
@@ -142,7 +142,7 @@ Both developers edit this one file during 1.8–1.13. To keep merges clean:
 
 ## 5. Gate 1 checklist (Task 1.17)
 
-All run inside `npm run judge -- …` on arm64, plus green ARM CI:
+All run inside `npm run judge -- …` (x86-64 replica), plus green CI:
 
 - [ ] `npm run judge -- sh scripts/validate.sh` → `Local scenario passed.`, exit 0, output saved to `evidence/` (**B**)
 - [ ] `npm run judge -- npm test` → all suites pass, including cold start ×20 and crash (**A**)

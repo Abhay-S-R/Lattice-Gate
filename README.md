@@ -66,6 +66,7 @@ Exit code is 0 for every answer, denials included. Only a `setup` or `revoke` th
 | `backup --out <dir>` | Signed (ML-DSA-65), encrypted backup of the control plane (registry snapshot and CP keys), wrapped to the operator recovery ML-KEM-768 key; pins its epoch in the anchor |
 | `restore <dir> --recovery-key <file> --anchor <file>` | Restores only after every check passes, in order: `bad_signature`, `unsupported_schema`, `digest_mismatch`, `stale_backup`, `decrypt_failed`, `incomplete_backup`. A refused restore leaves live state unchanged |
 | `crash-test [--point <p>]` | SIGKILLs the control plane at each rotation phase (`after_prepare`, `after_stage`, `before_commit`, `after_commit`, `during_distribute`) on an isolated cluster, restarts it and checks recovery: one active version everywhere, revocations kept, data readable, epochs never lower |
+| `msg demo [--seed <uint32>]` | Runs the authenticated messaging, replay protection, forward-secrecy, and seeded delivery demonstration |
 
 Operator flow for the adapter's log:
 

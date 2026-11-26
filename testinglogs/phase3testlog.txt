@@ -1,0 +1,104 @@
+﻿✔ challenge returns a unique 32-byte nonce with a 30 second lifetime (53.6329ms)
+✔ valid signed request is allowed (35.2698ms)
+✔ altered transcript field is denied as bad_signature (33.4322ms)
+✔ replayed nonce is denied as nonce_reused (31.2589ms)
+✔ expired challenge is denied as nonce_expired (31.9556ms)
+✔ unknown device is rejected before its nonce or signature is considered (33.3358ms)
+✔ signature made with the wrong context is denied as bad_signature (33.6901ms)
+✔ revoked device is denied before nonce processing (30.9442ms)
+✔ stale lease is denied before device or nonce processing (36.2745ms)
+✔ request naming a stale file version is denied as old_key_version (32.3225ms)
+✔ malformed auth body receives HTTP 400 (31.3791ms)
+✔ device client returns decision fields directly (41.7673ms)
+✔ revocation benchmark IDs are stable for a seed and unique by sample (2.6643ms)
+✔ revocation summaries use nearest-rank p50 and p95 in milliseconds (0.7191ms)
+✔ every registered command has the module shape (1.2324ms)
+✔ kig help lists every command on stdout, exit 0 (154.3443ms)
+✔ no command prints usage on stderr, exit 2 (145.6826ms)
+✔ unknown command exits 2 with help (145.4544ms)
+✔ unknown option exits 2 with that command usage (138.5362ms)
+✔ <command> --help prints that command usage, exit 0 (139.8012ms)
+✔ compat still works through the router (761.6851ms)
+✔ a command that throws a UsageError exits 2, other errors exit 1 with one line (1.335ms)
+✔ contracts object is deeply frozen (1.3803ms)
+✔ C1 KIG_HOME: env override, default under os.tmpdir() (0.3616ms)
+✔ C1 layout paths are fixed and stay inside KIG_HOME (0.8619ms)
+✔ C1 device/node/store ids that are not safe path segments are refused (1.7343ms)
+✔ C1 ports: loopback only, CP + A/B/C from a base (1.1968ms)
+✔ C2 every store shares the audit base; Phase 3 events use gen 0 (0.1618ms)
+✔ C3 snapshot: labels, context, defaults, field names (0.1712ms)
+✔ C4 registry read API names (0.1271ms)
+✔ C5 table ownership: no table owned twice, base tables owned by nobody (0.2419ms)
+✔ C6 HTTP conventions and route table (0.5072ms)
+✔ C6 decision rules are unique, lower_snake, and include every §8.2 rejection (0.2278ms)
+✔ C7 request transcript (0.1255ms)
+✔ C8 CLI command ownership: no name claimed twice (0.1337ms)
+✔ C9 shared cluster test helper API is pinned (0.0876ms)
+✔ device status values and signing contexts exist in the provider (0.2176ms)
+✔ only provider.cjs imports node:crypto (15.6171ms)
+✔ encrypted files can be shared and read through every node without plaintext stored (5033.4356ms)
+✔ serve binds loopback and call sends/receives JSON (33.5564ms)
+✔ serve returns 400 for malformed and non-JSON request bodies (8.3405ms)
+✔ serve enforces the body cap while streaming (3.9184ms)
+✔ call rejects an invalid route and times out (5.5186ms)
+✖ node auth-burst alert only fires on a deny, after the fifth denial (17.0553ms)
+✔ partition expires the node lease, denies access, records an alert, then heals (8402.0809ms)
+✔ verify-log accepts the Phase 3 registry and every node store (2557.0517ms)
+✔ buildSnapshot contains sorted device hashes, revocations, files, and grants (68.3104ms)
+✔ applySnapshot verifies signature and atomically rejects stale epochs (41.3778ms)
+✔ lease expires by monotonic time and remains invalid until a fresh head (38.337ms)
+✖ node pulls a policy missed while offline and accepts only its fresh signed head (173.2348ms)
+✔ registry approval publishes a signed policy to all three nodes (1314.8685ms)
+✔ revoking one device reaches all nodes while its peer remains allowed (3142.6072ms)
+✔ C9 test helper starts and stops a healthy loopback cluster (1599.3861ms)
+✔ kig up twice preserves the running process set (1440.0096ms)
+✔ KEM envelope round trip binds file, account and device context (5.5527ms)
+✔ tampered KEM ciphertext, wrap nonce, wrapped bytes and tag are rejected (1.555ms)
+✔ KEM wrap and unwrap wipe derived shared secrets and keys (1.0657ms)
+ℹ tests 57
+ℹ suites 0
+ℹ pass 55
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 27478.5466
+
+✖ failing tests:
+
+test at tests\unit\node-alerts.test.cjs:13:1
+✖ node auth-burst alert only fires on a deny, after the fifth denial (17.0553ms)
+  Error: EPERM, Permission denied: \\?\C:\Users\aniru\AppData\Local\Temp\kig-node-alert-59doBL '\\?\C:\Users\aniru\AppData\Local\Temp\kig-node-alert-59doBL'
+      at Object.rmSync (node:fs:1236:18)
+      at TestContext.<anonymous> (C:\Users\aniru\VSCProjects\ScalerKakkathon\devforge\tests\unit\node-alerts.test.cjs:15:20)
+      at TestHook.runInAsyncScope (node:async_hooks:214:14)
+      at TestHook.run (node:internal/test_runner/test:1106:25)
+      at TestHook.run (node:internal/test_runner/test:1427:18)
+      at TestHook.run (node:internal/util:584:20)
+      at Test.runHook (node:internal/test_runner/test:1024:20)
+      at after (node:internal/test_runner/test:1064:20)
+      at Test.run (node:internal/test_runner/test:1132:13)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+    errno: 1,
+    code: 'EPERM',
+    path: '\\\\?\\C:\\Users\\aniru\\AppData\\Local\\Temp\\kig-node-alert-59doBL',
+    syscall: 'rm'
+  }
+
+test at tests\unit\policy-distribution.test.cjs:99:1
+✖ node pulls a policy missed while offline and accepts only its fresh signed head (173.2348ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  438 !== 384
+  
+      at TestContext.<anonymous> (C:\Users\aniru\VSCProjects\ScalerKakkathon\devforge\tests\unit\policy-distribution.test.cjs:161:10)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 438,
+    expected: 384,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+

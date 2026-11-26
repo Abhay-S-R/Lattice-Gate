@@ -2,22 +2,27 @@
 
 **Project:** Key Identity Guard  
 **Runtime target:** Node.js 24.11.1, Linux **x86-64 (amd64)** judging container  
-**Status:** Gate 1 checks passed on x86-64 (2026-11-26)
+**Status:** Gate 1 checks passed on x86-64 for commit `ef7918cb5859b7e57769ca614b7ecc52bce89191` (2026-11-26)
 
 > **Platform correction (2026-11-26).** The organizers first said the judging container was ARM64, then corrected it to x86-64. The Gate 1 checks were re-run in the x86-64 replica (below). The earlier ARM64 results are kept under "Superseded" as a record of what was run; they are no longer the target.
 
 ## Verification results (x86-64, current)
 
-All in the judging replica (`npm run judge -- …`): linux/amd64, Node 24.11.1, Python 3.12.16 with `pqcrypto==0.4.0`, read-only root, no network, non-root user, writable `/tmp` only. Run natively on an x86-64 host; total time 96 s including the image build.
+The current hosted judging-replica job ran linux/amd64, Node 24.11.1, Python 3.12 with `pqcrypto==0.4.0`, a read-only root, no network, a non-root user, and writable `/tmp` only. The artifact records runner `X64` and commit `ef7918cb5859b7e57769ca614b7ecc52bce89191`.
 
 | Check | Result | Evidence |
 | --- | --- | --- |
-| `kig compat` | **PASS**, all checks; `node v24.11.1 linux-x64`, OpenSSL 3.5.4, SQLite 3.50.4 | `evidence/x64-replica-compat.txt` |
-| Test suite (unit, adapter contract, negative incl. marker scan, concurrency warm + cold ×20, crash, interop) | **PASS**: 262 tests, 262 passed, 0 failed, **0 skipped** | `evidence/x64-replica-test.txt` |
-| `protected_read` interoperability | **PASS**: `pqcrypto==0.4.0` decapsulates and recomputes the proof, `interop 25/25` (part of the suite above) | `evidence/x64-replica-test.txt` |
-| Toolkit lost-device validator | **PASS**: `Local scenario passed.` including "fake key stays out of output" | `evidence/x64-replica-validate.txt` |
-| Secret marker scan | **PASS**: unique `key_material` marker absent from stdout, stderr and every file under the state directory (test `marker scan` in `tests/negative/`) | `evidence/x64-replica-test.txt` |
-| CI on x86-64 (`x64` and `judging-replica` jobs) | **PASS**, confirmed by the user in GitHub; run URL/commit not captured here | GitHub Actions |
+| `kig compat` | **PASS**, all checks; `node v24.11.1 linux-x64`, OpenSSL 3.5.4, SQLite 3.50.4 | [current compat output](gate1-ef7918c-compat.txt) |
+| Test suite (unit, adapter contract, negative incl. marker scan, concurrency warm + cold ×20, crash, interop) | **PASS**: 395 tests, 395 passed, 0 failed, **0 skipped** | [current judge test output](gate1-ef7918c-tests.txt) |
+| `protected_read` interoperability | **PASS**: `pqcrypto==0.4.0` decapsulates and recomputes the proof, `interop 25/25` (part of the suite above) | [current judge test output](gate1-ef7918c-tests.txt) |
+| Toolkit lost-device validator | **PASS**: `Local scenario passed.` including "fake key stays out of output" | [current validator output](gate1-ef7918c-validate.txt) |
+| Secret marker scan | **PASS**: unique `key_material` marker absent from stdout, stderr and every file under the state directory (including SQLite WAL files), tested in `tests/negative/` | [current judge test output](gate1-ef7918c-tests.txt) |
+| CI on x86-64 (`x64` and `judging-replica` jobs) | **PASS**, both jobs and all steps | [GitHub Actions run 45889723073](https://github.com/Abhay-S-R/devforge/actions/runs/45889723073) |
+
+## Merge and tag status
+
+- `main` and `origin/main` both point to the verified commit above.
+- The annotated `round1-ready` tag exists locally at `83399941ddb3bd947ad3d3d6564ab15b51252356`, an ancestor of the verified commit. The tag is **not present on `origin`**; publishing that tag remains outstanding.
 
 ## Scope and limitations
 

@@ -1,0 +1,34 @@
+﻿=== node kig.cjs msg demo ===
+PASS temporary Alice/Bob identities are enrolled and pinned to the signed policy
+PASS tampered M1 and unregistered peer are rejected
+PASS tampered M2 signature transcript and key-confirmation MAC are rejected
+PASS wrong initiator key-confirmation MAC is rejected
+PASS authenticated ephemeral KEM handshake, transcript signatures, and mutual key confirmation
+PASS wrong recipient, altered AAD, and duplicate record are rejected
+PASS transport receipt: 4/4 chunks (2 retries)
+PASS reassembly complete: 1 message
+PASS application delivery: exact message delivered once despite loss, duplication, and reordering
+PASS incomplete message expires; message-size and buffer limits fail closed
+PASS closed-session replay rejected; later signing-key exposure cannot recover ephemeral traffic keys
+PASS revoked device cannot establish or continue a session
+Session resumption: NOT SUPPORTED (D-05)
+
+=== crypto-boundary & cli-main ===
+✔ every registered command has the module shape (1.1414ms)
+✔ kig help lists every command on stdout, exit 0 (149.2093ms)
+✔ no command prints usage on stderr, exit 2 (142.4281ms)
+✔ unknown command exits 2 with help (142.1361ms)
+✔ unknown option exits 2 with that command usage (144.9323ms)
+✔ <command> --help prints that command usage, exit 0 (146.1267ms)
+✔ compat still works through the router (838.2572ms)
+✔ a command that throws a UsageError exits 2, other errors exit 1 with one line (1.251ms)
+✔ only provider.cjs imports node:crypto (15.773ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1767.9227
+

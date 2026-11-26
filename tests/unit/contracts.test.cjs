@@ -86,7 +86,7 @@ test('C5 table ownership: no table owned twice, base tables owned by nobody', ()
   for (const store of ['registry', 'node', 'device']) {
     const t = c.TABLES[store];
     assert.ok(t, store);
-    const all = [...t.A, ...t.B];
+    const all = [...t.A, ...t.B, ...(t.P4 || [])];
     assert.equal(new Set(all).size, all.length, `duplicate table in ${store}`);
     for (const base of c.STORE_BASE.tables) assert.ok(!all.includes(base), `${store}: ${base} is shared base`);
   }
@@ -129,7 +129,7 @@ test('C7 request transcript', () => {
 });
 
 test('C8 CLI command ownership: no name claimed twice', () => {
-  const all = [...c.COMMANDS.A, ...c.COMMANDS.B];
+  const all = [...c.COMMANDS.A, ...c.COMMANDS.B, ...c.COMMANDS.P4];
   assert.equal(new Set(all).size, all.length);
   assert.ok(c.COMMANDS.A.includes('up') && c.COMMANDS.B.includes('init'));
 });
@@ -144,7 +144,33 @@ test('device status values and signing contexts exist in the provider', () => {
     assert.ok(Object.values(CONTEXTS).includes(ctx), ctx);
   }
   const labels = [c.SNAPSHOT.label, c.SNAPSHOT.headLabel, c.SNAPSHOT.ackLabel, c.REQUEST.label, c.ENROL.label, c.ENROL.approvalLabel,
-    c.WRAP.label, c.WRAP.envelopeLabel, c.WRAP.custodianLabel, c.WRAP.fileAadLabel];
+    c.WRAP.label, c.WRAP.envelopeLabel, c.WRAP.custodianLabel, c.WRAP.fileAadLabel,
+    c.ROTATION.stageLabel, c.ROTATION.stageAckLabel, c.ROTATION.stageContentLabel,
+    c.BACKUP.manifestLabel, c.BACKUP.payloadLabel, c.BACKUP.wrapLabel];
   assert.equal(new Set(labels).size, labels.length, 'encode labels must be distinct');
   for (const l of labels) assert.match(l, /^kig\/v1\/[a-z-]+$/);
+});
+
+test('Phase 4 rotation contract: phases, crash points, 30 s grace, size caps', () => {
+  assert.deepEqual([...c.ROTATION.phases], ['PREPARE', 'REWRAP', 'STAGE', 'COMMIT', 'DISTRIBUTE', 'COMPLETE', 'ABORTED']);
+  assert.deepEqual([...c.ROTATION.crashPoints], ['after_prepare', 'after_stage', 'before_commit', 'after_commit', 'during_distribute']);
+  assert.equal(c.ROTATION.graceMs, 30000);
+  assert.equal(c.ROTATION.context, CONTEXTS.revocation);
+  // A stage message (base64 ciphertext + envelopes) must fit the HTTP body cap.
+  assert.ok(Math.ceil(c.ROTATION.maxFileBytes * 4 / 3) + 256 * 1024 < c.HTTP.maxBodyBytes);
+  for (const r of ['transfer_unknown', 'transfer_terminated', 'grace_expired', 'transfer_expired']) assert.ok(Object.values(c.RULES).includes(r), r);
+  assert.equal(c.ROUTES.node.transferChunk, 'POST /v1/transfer/chunk');
+  assert.equal(c.ROUTES.cp.rotate, 'POST /v1/files/rotate');
+});
+
+test('Phase 4 backup contract; every store stays at schema version 1', () => {
+  assert.equal(c.BACKUP.context, CONTEXTS.backup);
+  assert.deepEqual([...c.BACKUP.files], ['manifest.json', 'manifest.sig', 'wrap.bin', 'payload.bin']);
+  assert.deepEqual([...c.BACKUP.failures], ['bad_signature', 'unsupported_schema', 'digest_mismatch', 'stale_backup', 'decrypt_failed', 'incomplete_backup']);
+  // Phase 4 adds tables in place (ensurePhase4), like Phase 3 and Phase 6: no version bump.
+  assert.equal(require('../../src/store/schema-cp.cjs').VERSION, 1);
+  assert.equal(require('../../src/store/schema-node.cjs').VERSION, 1);
+  assert.equal(require('../../src/store/schema-device.cjs').VERSION, 1);
+  // The Round 1 adapter schema is frozen.
+  assert.equal(require('../../src/store/schema-adapter.cjs').VERSION, 1);
 });

@@ -57,6 +57,15 @@ Exit code is 0 for every answer, denials included. Only a `setup` or `revoke` th
 | `device enrol <device> --account <account>` / `device approve <device> --by <device>\|--operator --approval-id <id>` | Creates a device keystore with proof of possession, then activates it through approval |
 | `file publish <file> --as <device> --input <path>` / `file read <file> --device <device> --node <A\|B\|C>` | Encrypts file contents at the control plane and reads them through an authenticated node |
 | `share <file> --with <account>` | Grants an account access by adding device-bound encrypted envelopes |
+| `up` / `down` / `status` | Starts, stops and checks the control plane (`127.0.0.1:7400`) and nodes A, B, C (`7401`–`7403`); `KIG_PORT_BASE` moves them |
+| `revoke --device <device>` | Revokes a device; every node denies it once it applies the signed snapshot |
+| `node partition <A|B|C>` / `node heal <A|B|C>` | Cuts a node off from the CP to show it fails closed at lease expiry (5 s) |
+| `bench revocation --n 100 --seed <s>` | Revocation propagation p50/p95/max per node and last node, plus the partition bound |
+| `rotate --file <file>` | Rotates a file to a new key version: staged on every node with signed acks, then committed with an epoch cutoff. New requests for the old version are refused from the moment each node applies the cutoff; transfers already in flight may finish within 30 s (node-local clock), then end |
+| `lost --device <device>` | Lost device: revokes it on every node (prints each node's signed-ack latency), then re-keys every file it could read. A replacement enrols with `device enrol` and needs approval by another active device of the account or the operator; it then receives envelopes for the current versions |
+| `backup --out <dir>` | Signed (ML-DSA-65), encrypted backup of the control plane (registry snapshot and CP keys), wrapped to the operator recovery ML-KEM-768 key; pins its epoch in the anchor |
+| `restore <dir> --recovery-key <file> --anchor <file>` | Restores only after every check passes, in order: `bad_signature`, `unsupported_schema`, `digest_mismatch`, `stale_backup`, `decrypt_failed`, `incomplete_backup`. A refused restore leaves live state unchanged |
+| `crash-test [--point <p>]` | SIGKILLs the control plane at each rotation phase (`after_prepare`, `after_stage`, `before_commit`, `after_commit`, `during_distribute`) on an isolated cluster, restarts it and checks recovery: one active version everywhere, revocations kept, data readable, epochs never lower |
 | `msg demo [--seed <uint32>]` | Runs the authenticated messaging, replay protection, forward-secrecy, and seeded delivery demonstration |
 
 Operator flow for the adapter's log:
@@ -93,10 +102,11 @@ The judging container is Linux: the replica (and CI, both x86-64) is the source 
 | Adapter contract | `tests/adapter/contract.test.cjs` | spawns `track4_service.cjs` once per request, exactly like the worker |
 | Negative | `tests/negative/` | hostile identifiers (`__proto__`, lone surrogates, NUL, newline-JSON, paths), malformed input, strict Base64, leak and `key_material` marker scans |
 | Concurrency | `tests/adapter/concurrency.test.cjs` | 8 parallel processes, warm and cold start, ×20 |
-| Crash | `tests/crash/` | SIGKILL inside a transaction: no partial state, chain stays valid |
+| Crash | `tests/crash/` | SIGKILL inside an adapter transaction: no partial state, chain stays valid; `kig crash-test` at all five rotation crash points |
+| End to end | `tests/e2e/` | Round 2 demo steps 4–8 on a live CP and three nodes, with the real 30 s grace window (Gate 4) |
 | Interop | `tests/interop/` | Python `pqcrypto==0.4.0` decapsulates our `protected_read` output and recomputes the proof (25 runs). Skipped with a notice if `pqcrypto` is absent. |
 
-Round 1 gate evidence: [`evidence/round1.md`](evidence/round1.md).
+Round 1 gate evidence: [`evidence/round1.md`](evidence/round1.md). Phase 4 (rotation, lost device, crash recovery, backups): [`evidence/phase4.md`](evidence/phase4.md).
 
 ## Limitations
 
@@ -107,3 +117,11 @@ Round 1 adapter (full threat model: Task 7.5):
 - **Stored bodies are plaintext in SQLite.** The adapter has no secret outside the state directory, so encryption there would protect nothing (D-14).
 - **`protected_read` is a KEM/HMAC interoperability check**, not end-to-end messaging, replay protection or forward secrecy.
 - **Memory wiping is best effort.** JavaScript cannot guarantee that secrets are erased from memory.
+
+Round 2 rotation, recovery and backups (Phase 4; details in [`evidence/phase4.md`](evidence/phase4.md)):
+
+- **The control plane is the key custodian** (KMS model): it decrypts during rotation and holds every file key under its master KEM key. Content or keys a lost device copied before the loss cannot be recalled; revocation stops new access only.
+- **Single host, one monotonic clock, loopback HTTP.** Cutoff grace (30 s) and leases are node-local monotonic times; latencies exclude real networks.
+- **Files are capped at 256 KiB**, so a staged version fits one signed HTTP message.
+- **Node anti-rollback protects against restoring an old `node.db`**, not against an attacker who controls a node's whole directory. A rolled-back node fails closed for versions staged after its copy was taken.
+- **The recovery private key lives in `KIG_HOME/operator/`** for the demo; in a real deployment the operator keeps it offline.

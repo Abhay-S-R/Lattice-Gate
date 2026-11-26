@@ -16,4 +16,7 @@ function recordRevocationRefusal(db, deviceId, refusal) {
 function recordMissingAck(db, epoch, nodeId) {
   append(db, 'CP-MISSING-ACK', 'high', 'node did not acknowledge a published policy before the benchmark deadline', `${nodeId}-${epoch}`);
 }
-module.exports = { recordRevocationRefusal, recordMissingAck };
+function recordUnreadableVersion(db, fileId) {
+  append(db, 'CP-RECOVERY-UNREADABLE', 'high', 'a committed file version could not be decrypted through its custodian wrap after recovery', typeof fileId === 'string' ? fileId : undefined);
+}
+module.exports = { recordRevocationRefusal, recordMissingAck, recordUnreadableVersion };

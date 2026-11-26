@@ -1,0 +1,56 @@
+PASS after_prepare     abort        rotation v1->v2, active after recovery v1
+     ok   cp_killed_at_point: CP process gone, no answer to the rotate request
+     ok   journal_at_crash: last durable phase PREPARE
+     ok   recovery_action: abort: journal ABORTED
+     ok   cp_one_active_version: active v1 (expected v1); active rows [1]; staged 0
+     ok   nodes_one_active_version: A: epoch 12 v1, B: epoch 12 v1, C: epoch 12 v1
+     ok   epoch_never_decreases: CP 12 -> 12; nodes A 12 -> 12, B 12 -> 12, C 12 -> 12
+     ok   revoked_stays_revoked: CP revoked; nodes device_revoked,device_revoked,device_revoked
+     ok   committed_data_readable: 6/6 reads decrypted v1
+     ok   custodian_test_decrypt: 1 verified, 0 unreadable
+     ok   audit_chain_ok: 16 events
+PASS after_stage       abort        rotation v1->v3, active after recovery v1
+     ok   cp_killed_at_point: CP process gone, no answer to the rotate request
+     ok   journal_at_crash: last durable phase STAGE
+     ok   recovery_action: abort: journal ABORTED
+     ok   cp_one_active_version: active v1 (expected v1); active rows [1]; staged 0
+     ok   nodes_one_active_version: A: epoch 12 v1, B: epoch 12 v1, C: epoch 12 v1
+     ok   epoch_never_decreases: CP 12 -> 12; nodes A 12 -> 12, B 12 -> 12, C 12 -> 12
+     ok   revoked_stays_revoked: CP revoked; nodes device_revoked,device_revoked,device_revoked
+     ok   committed_data_readable: 6/6 reads decrypted v1
+     ok   custodian_test_decrypt: 1 verified, 0 unreadable
+     ok   audit_chain_ok: 20 events
+PASS before_commit     abort        rotation v1->v4, active after recovery v1
+     ok   cp_killed_at_point: CP process gone, no answer to the rotate request
+     ok   journal_at_crash: last durable phase STAGE
+     ok   recovery_action: abort: journal ABORTED
+     ok   cp_one_active_version: active v1 (expected v1); active rows [1]; staged 0
+     ok   nodes_one_active_version: A: epoch 12 v1, B: epoch 12 v1, C: epoch 12 v1
+     ok   epoch_never_decreases: CP 12 -> 12; nodes A 12 -> 12, B 12 -> 12, C 12 -> 12
+     ok   revoked_stays_revoked: CP revoked; nodes device_revoked,device_revoked,device_revoked
+     ok   committed_data_readable: 6/6 reads decrypted v1
+     ok   custodian_test_decrypt: 1 verified, 0 unreadable
+     ok   audit_chain_ok: 24 events
+PASS after_commit      roll_forward rotation v1->v5, active after recovery v5
+     ok   cp_killed_at_point: CP process gone, no answer to the rotate request
+     ok   journal_at_crash: last durable phase COMMIT
+     ok   recovery_action: roll_forward: journal COMPLETE
+     ok   cp_one_active_version: active v5 (expected v5); active rows [5]; staged 0
+     ok   nodes_one_active_version: A: epoch 13 v5, B: epoch 13 v5, C: epoch 13 v5
+     ok   epoch_never_decreases: CP 12 -> 13; nodes A 12 -> 13, B 12 -> 13, C 12 -> 13
+     ok   revoked_stays_revoked: CP revoked; nodes device_revoked,device_revoked,device_revoked
+     ok   committed_data_readable: 6/6 reads decrypted v5
+     ok   custodian_test_decrypt: 1 verified, 0 unreadable
+     ok   audit_chain_ok: 29 events
+PASS during_distribute roll_forward rotation v5->v6, active after recovery v6
+     ok   cp_killed_at_point: CP process gone, no answer to the rotate request
+     ok   journal_at_crash: last durable phase DISTRIBUTE
+     ok   recovery_action: roll_forward: journal COMPLETE
+     ok   cp_one_active_version: active v6 (expected v6); active rows [6]; staged 0
+     ok   nodes_one_active_version: A: epoch 14 v6, B: epoch 14 v6, C: epoch 14 v6
+     ok   epoch_never_decreases: CP 13 -> 14; nodes A 13 -> 14, B 13 -> 14, C 13 -> 14
+     ok   revoked_stays_revoked: CP revoked; nodes device_revoked,device_revoked,device_revoked
+     ok   committed_data_readable: 6/6 reads decrypted v6
+     ok   custodian_test_decrypt: 1 verified, 0 unreadable
+     ok   audit_chain_ok: 34 events
+report not saved (ENOENT): /app/evidence/crash-test-2026-11-26T21-16-58-033Z.json is not writable here

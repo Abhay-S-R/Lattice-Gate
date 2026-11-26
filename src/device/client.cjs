@@ -22,11 +22,18 @@ async function request(nodeUrl, deviceDir, op, fields) {
   const body = { ...signedFields, nonce: nonce.toString('base64') };
   body.sig = provider.sign(keys.signPrivate, REQUEST.context, transcript(signedFields)).toString('base64');
   body.sign_pk = provider.exportPublic(keys.signPublic).toString('base64');
-  const route = op === 'file.read' ? '/v1/files/read' : '/v1/auth';
+  const route = op === 'file.read' ? '/v1/files/read' : op === 'file.transfer' ? '/v1/transfer/start' : '/v1/auth';
   const response = await call(`${nodeUrl}${route}`, 'POST', body, { timeoutMs: 5000 });
   if (response.status !== 200 || !response.json || typeof response.json !== 'object' || Array.isArray(response.json)) {
     throw new Error('node_request_failed');
   }
   return response.json;
 }
-module.exports = { request, transcript };
+/** Fetch one chunk of an open transfer (Phase 4). The transfer ID is the bearer credential. */
+async function transferChunk(nodeUrl, transferId, index) {
+  const { call } = require('../core/http.cjs');
+  const response = await call(`${nodeUrl}/v1/transfer/chunk`, 'POST', { transfer_id: transferId, index }, { timeoutMs: 5000 });
+  if (response.status !== 200 || !response.json || typeof response.json !== 'object' || Array.isArray(response.json)) throw new Error('node_request_failed');
+  return response.json;
+}
+module.exports = { request, transcript, transferChunk };

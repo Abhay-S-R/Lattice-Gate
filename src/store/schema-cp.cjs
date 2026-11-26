@@ -18,5 +18,27 @@ const A_DDL = `
 CREATE TABLE snapshots(epoch INTEGER PRIMARY KEY, body TEXT NOT NULL, sig BLOB NOT NULL, created_ms INTEGER NOT NULL) STRICT;
 CREATE TABLE node_acks(node_id TEXT NOT NULL, epoch INTEGER NOT NULL, acked_ms INTEGER NOT NULL, acked_mono_ns TEXT NOT NULL, sig BLOB NOT NULL, PRIMARY KEY(node_id,epoch)) STRICT;
 `;
-function init(db) { initBase(db); db.exec(DDL); db.exec(A_DDL); }
-module.exports = { VERSION: SCHEMA_VERSION_ADAPTER, init, DDL, A_DDL };
+/* ---- Phase 4: rotation journal, staged acks, cutoffs (docs/plans/phase-4.md §3) ---- */
+const P4_DDL = `
+CREATE TABLE IF NOT EXISTS rotation_journal(rotation_id TEXT NOT NULL, phase TEXT NOT NULL CHECK(phase IN ('PREPARE','REWRAP','STAGE','COMMIT','DISTRIBUTE','COMPLETE','ABORTED')), file_id TEXT NOT NULL, from_version INTEGER NOT NULL, to_version INTEGER NOT NULL, epoch INTEGER, reason TEXT, ts_ms INTEGER NOT NULL, PRIMARY KEY(rotation_id,phase), FOREIGN KEY(file_id) REFERENCES files(file_id)) STRICT;
+CREATE INDEX IF NOT EXISTS rotation_journal_by_file ON rotation_journal(file_id,to_version);
+CREATE TABLE IF NOT EXISTS rotation_stage_acks(rotation_id TEXT NOT NULL, node_id TEXT NOT NULL, digest BLOB NOT NULL, sig BLOB NOT NULL, acked_ms INTEGER NOT NULL, PRIMARY KEY(rotation_id,node_id)) STRICT;
+CREATE TABLE IF NOT EXISTS file_cutoffs(file_id TEXT PRIMARY KEY, old_version INTEGER NOT NULL, from_epoch INTEGER NOT NULL, grace_ms INTEGER NOT NULL, committed_ms INTEGER NOT NULL, FOREIGN KEY(file_id) REFERENCES files(file_id)) STRICT;
+`;
+
+// Phase 4 tables are added in place, never by bumping the schema version (same approach as Phase 3's
+// lazy node_acks column and Phase 6's ensureMessaging): a store created before Phase 4 upgrades the
+// first time Phase 4 code opens it. CREATE ... IF NOT EXISTS is idempotent, so concurrent processes are safe.
+const P4_TABLES = ["rotation_journal","rotation_journal_by_file","rotation_stage_acks","file_cutoffs"];
+const upgraded = new WeakSet();
+function ensurePhase4(db) {
+  if (upgraded.has(db)) return;
+  const have = new Set(db.prepare("SELECT name FROM sqlite_master WHERE type IN ('table','index')").all().map((r) => r.name));
+  if (!P4_TABLES.every((t) => have.has(t))) {
+    if (db.isTransaction) db.exec(P4_DDL);
+    else require('./db.cjs').tx(db, () => db.exec(P4_DDL));
+  }
+  upgraded.add(db);
+}
+function init(db) { initBase(db); db.exec(DDL); db.exec(A_DDL); db.exec(P4_DDL); }
+module.exports = { VERSION: SCHEMA_VERSION_ADAPTER, init, DDL, A_DDL, P4_DDL, ensurePhase4 };

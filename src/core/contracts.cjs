@@ -8,7 +8,7 @@ const { CONTEXTS } = require('../crypto/provider.cjs');
 /** @typedef {'A'|'B'|'C'} NodeId */
 /** @typedef {'pending'|'active'|'revoked'} DeviceStatus */
 /** @typedef {{ device_id:string, account:string, sign_pk_sha256:string, kem_pk_sha256:string, status:DeviceStatus }} SnapshotDevice */
-/** @typedef {{ epoch:number, issued_at_ms:number, lease_ms:number, devices:SnapshotDevice[], revoked_devices:string[], files:{file_id:string, active_version:number, cutoff:null}[], grants:{file_id:string, account:string}[] }} PolicySnapshot */
+/** @typedef {{ epoch:number, issued_at_ms:number, lease_ms:number, devices:SnapshotDevice[], revoked_devices:string[], files:{file_id:string, active_version:number, cutoff:null|{old_version:number, from_epoch:number, grace_ms:number}}[], grants:{file_id:string, account:string}[] }} PolicySnapshot */
 /** @typedef {{ decision:'allow'|'deny', rule:string }} Decision */
 /** @typedef {{ freshHome():string, startCluster(home:string, options:{nodes:NodeId[]}):{cpUrl:string,nodeUrls:Record<NodeId,string>,stop():Promise<void>} }} ClusterTestHelpers */
 
@@ -95,32 +95,50 @@ const REQUEST = freeze({
 });
 const ENROL = freeze({ label: 'kig/v1/enrol', approvalLabel: 'kig/v1/enrol-approval', context: CONTEXTS.request });
 const WRAP = freeze({ label: 'kig/v1/wrap', envelopeLabel: 'kig/v1/envelope', custodianLabel: 'kig/v1/custodian-wrap', fileAadLabel: 'kig/v1/file-aad' });
+// Phase 4 (docs/plans/phase-4.md): rotation, cutoff/grace, transfers, crash points, backups.
+const ROTATION = freeze({
+  phases: ['PREPARE', 'REWRAP', 'STAGE', 'COMMIT', 'DISTRIBUTE', 'COMPLETE', 'ABORTED'],
+  crashPoints: ['after_prepare', 'after_stage', 'before_commit', 'after_commit', 'during_distribute'],
+  graceMs: 30000, maxGraceMs: 600000, chunkBytes: 16 * 1024, maxFileBytes: 256 * 1024, transferTtlMs: 600000,
+  stageTimeoutMs: 5000, distributeTimeoutMs: 10000,
+  stageLabel: 'kig/v1/stage', stageAckLabel: 'kig/v1/stage-ack', stageContentLabel: 'kig/v1/stage-content',
+  context: CONTEXTS.revocation,
+});
+const BACKUP = freeze({
+  format: 'kig-backup/1', payloadFormat: 'kig-backup-payload/1',
+  manifestLabel: 'kig/v1/backup-manifest', payloadLabel: 'kig/v1/backup-payload', wrapLabel: 'kig/v1/backup',
+  context: CONTEXTS.backup, files: ['manifest.json', 'manifest.sig', 'wrap.bin', 'payload.bin'],
+  failures: ['bad_signature', 'unsupported_schema', 'digest_mismatch', 'stale_backup', 'decrypt_failed', 'incomplete_backup'],
+});
 const REGISTRY_API = Object.freeze(['listDevices', 'listGrants', 'listFiles', 'getDevice']);
 const SNAPSHOT_API = Object.freeze(['buildSnapshot', 'publish', 'current']);
 const TABLES = freeze({
-  registry: { A: ['snapshots', 'node_acks'], B: ['accounts', 'devices', 'approvals', 'files', 'file_versions', 'grants', 'envelopes', 'custodian_wraps'] },
-  node: { A: ['policy', 'lease'], B: ['challenges', 'used_nonces', 'ciphertexts', 'node_envelopes'] },
-  device: { A: [], B: ['keys', 'pinned'] },
+  registry: { A: ['snapshots', 'node_acks'], B: ['accounts', 'devices', 'approvals', 'files', 'file_versions', 'grants', 'envelopes', 'custodian_wraps'], P4: ['rotation_journal', 'rotation_stage_acks', 'file_cutoffs'] },
+  node: { A: ['policy', 'lease'], B: ['challenges', 'used_nonces', 'ciphertexts', 'node_envelopes'], P4: ['cutoffs', 'transfers'] },
+  device: { A: [], B: ['keys', 'pinned'], P4: [] },
 });
 const HTTP = freeze({ maxBodyBytes: 1024 * 1024, decisionStatus: 200, malformedStatus: 400, timeoutMs: 5000 });
 const ROUTES = freeze({
-  cp: { health: 'GET /v1/health', policyHead: 'GET /v1/policy/head', policyPull: 'POST /v1/policy/pull', policyAck: 'POST /v1/policy/ack', enrol: 'POST /v1/devices/enrol', revoke: 'POST /v1/devices/revoke' },
-  node: { health: 'GET /v1/health', policyHead: 'GET /v1/policy/head', policyPull: 'POST /v1/policy/pull', challenge: 'GET /v1/challenge', authenticate: 'POST /v1/auth', fileRead: 'POST /v1/files/read' },
+  cp: { health: 'GET /v1/health', policyHead: 'GET /v1/policy/head', policyPull: 'POST /v1/policy/pull', policyAck: 'POST /v1/policy/ack', enrol: 'POST /v1/devices/enrol', revoke: 'POST /v1/devices/revoke', rotate: 'POST /v1/files/rotate', lost: 'POST /v1/devices/lost' },
+  node: { health: 'GET /v1/health', policyHead: 'GET /v1/policy/head', policyPull: 'POST /v1/policy/pull', challenge: 'GET /v1/challenge', authenticate: 'POST /v1/auth', fileRead: 'POST /v1/files/read',
+    stage: 'POST /v1/stage', stageDrop: 'POST /v1/stage/drop', transferStart: 'POST /v1/transfer/start', transferChunk: 'POST /v1/transfer/chunk' },
 });
 const RULES = freeze({
   leaseExpired: 'lease_expired', unknownDevice: 'unknown_device', deviceRevoked: 'device_revoked',
   nonceUnknown: 'nonce_unknown', nonceExpired: 'nonce_expired', nonceReused: 'nonce_reused',
   badSignature: 'bad_signature', oldKeyVersion: 'old_key_version', notGranted: 'not_granted', allowed: 'allowed',
+  transferUnknown: 'transfer_unknown', transferTerminated: 'transfer_terminated', graceExpired: 'grace_expired', transferExpired: 'transfer_expired',
 });
 const DEVICE_STATUS = Object.freeze(['pending', 'active', 'revoked']);
 const COMMANDS = freeze({
   A: ['up', 'down', 'status', 'policy', 'revoke', 'bench', 'node'],
   B: ['init', 'account', 'device', 'file', 'share'],
+  P4: ['rotate', 'lost', 'crash-test', 'backup', 'restore'],
 });
 const TEST_HELPERS = Object.freeze(['freshHome', 'startCluster']);
 
 module.exports = freeze({
   kigHome, layout, ports, url, LOOPBACK, NODE_IDS, STORE_BASE, SNAPSHOT, REQUEST,
   ENROL, WRAP, REGISTRY_API, SNAPSHOT_API, TABLES, HTTP, ROUTES, RULES,
-  DEVICE_STATUS, COMMANDS, TEST_HELPERS,
+  DEVICE_STATUS, COMMANDS, TEST_HELPERS, ROTATION, BACKUP,
 });

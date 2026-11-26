@@ -37,9 +37,17 @@ module.exports = { name: 'device', describe: 'enrol and approve devices', usage:
       proof = provider.sign(keys.signPrivate, ENROL.context, registry.approvalPayload(positionals[1], values.by, values['approval-id']));
     }
     const db = cpDb(home);
-    try { registry.approve(db, { device_id: positionals[1], approver_device: values.by || null, operator: values.operator, approval_id: values['approval-id'], proof }); }
-    catch (e) { throw new CommandError(`approval denied (${e.message})`); } finally { db.close(); }
-    io.out(`DEVICE ${positionals[1]} active\n`); return 0;
+    let issued;
+    try {
+      try { registry.approve(db, { device_id: positionals[1], approver_device: values.by || null, operator: values.operator, approval_id: values['approval-id'], proof }); }
+      catch (e) { throw new CommandError(`approval denied (${e.message})`); }
+      // Phase 4: an approved device receives envelopes for the active version of its account's files.
+      try { issued = require('../cp/files.cjs').provisionDevice(db, positionals[1], home); }
+      catch { throw new CommandError(`device ${positionals[1]} is active, but its file envelopes could not be issued; kig share <file> --with <account> re-issues them`); }
+    } finally { db.close(); }
+    io.out(`DEVICE ${positionals[1]} active\n`);
+    if (issued.length) io.out(`PROVISIONED ${positionals[1]}: ${issued.map((f) => `${require('./text.cjs').safe(f.file_id)} v${f.version}`).join(', ')}\n`);
+    return 0;
   }
   throw new UsageError('expected enrol <device> --account <account> or approve <device> --by <device>|--operator --approval-id <id>');
 } };

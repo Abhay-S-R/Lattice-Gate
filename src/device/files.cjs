@@ -15,4 +15,16 @@ function read(home, deviceId, response) {
   }
   finally { dek.fill(0); }
 }
-module.exports = { read };
+/** Reassemble a chunked transfer (Phase 4) and decrypt it exactly like a one-shot read. */
+function readTransfer(home, deviceId, start, chunks) {
+  if (!start || start.decision !== 'allow') throw new Error(start?.rule || 'file_denied');
+  if (!Array.isArray(chunks) || chunks.length !== start.chunk_count) throw new Error('transfer_incomplete');
+  const parts = chunks.map((c, i) => {
+    if (!c || c.decision !== 'allow' || c.index !== i) throw new Error(c?.rule || 'transfer_incomplete');
+    return Buffer.from(c.data, 'base64');
+  });
+  const ciphertext = Buffer.concat(parts);
+  if (ciphertext.length !== start.total_bytes) throw new Error('transfer_incomplete');
+  return read(home, deviceId, { ...start, ciphertext: ciphertext.toString('base64') });
+}
+module.exports = { read, readTransfer };

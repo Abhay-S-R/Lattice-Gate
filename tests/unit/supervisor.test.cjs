@@ -18,6 +18,7 @@ test('C9 test helper starts and stops a healthy loopback cluster', async () => {
     for (const file of ['cp.pid', 'A.pid', 'B.pid', 'C.pid']) assert.ok(fs.existsSync(path.join(home, 'run', file)), file);
   } finally {
     await cluster.stop();
+    fs.rmSync(home, { recursive: true, force: true });
   }
   const after = runKig(['status'], { env });
   assert.equal(after.code, 1);
@@ -34,5 +35,8 @@ test('kig up twice preserves the running process set', async () => {
     assert.equal(second.code, 0, second.stderr);
     const after = ['cp', 'A', 'B', 'C'].map((id) => JSON.parse(fs.readFileSync(path.join(home, 'run', `${id}.pid`), 'utf8')).pid);
     assert.deepEqual(after, before);
-  } finally { await cluster.stop(); }
+  } finally {
+    await cluster.stop();
+    fs.rmSync(home, { recursive: true, force: true });
+  }
 });

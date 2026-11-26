@@ -2,10 +2,10 @@
 
 **Track:** 4 — Trust, but verify
 **Document:** features.md
-**Status:** Draft v0.3 — v0.2 independently re-verified; audit findings (cold-start WAL race, prototype-key identifiers, exit-code policy, Base64 strictness, adapter at-rest honesty, detector baseline/thresholds, revoke-approval matching, audit generation scoping) folded in
+**Status:** Draft v0.4 — organizer answers folded in (ARM judging container, Round 1 = adapter only with hidden tests/exploits, Round 2 = CLI, Node 24.11.1 confirmed, WAL works); input-channel threat scope (D-15); strict contract response shapes (D-16); adapter self-monitoring moved to P0 (P0-10). v0.3: audit findings folded in.
 **Purpose:** Define observable product behaviour before designing the architecture.
 
-**How to read v0.3.** Feature IDs are unchanged from v0.1 so existing cross-references still work. Items changed in v0.2 are tagged **[CHG]**, new in v0.2 **[NEW]**; items changed or added in v0.3 are tagged **[v0.3]**. Section 0 is the decision record: what was decided, on what evidence, and what is still unverified. Nothing in Section 0 is a claim about the organizer's container; every measurement was taken in a stand-in environment described in Appendix A. Technology/runtime *details* (which built-in does what, module layout) belong in `architecture.md`; this document keeps only the runtime *decision* and its evidence.
+**How to read v0.3.** Feature IDs are unchanged from v0.1 so existing cross-references still work. Items changed in v0.2 are tagged **[CHG]**, new in v0.2 **[NEW]**; items changed or added in v0.3 are tagged **[v0.3]**, in v0.4 **[v0.4]**. Section 0 is the decision record: what was decided, on what evidence, and what is still unverified. Nothing in Section 0 is a claim about the organizer's container; every measurement was taken in a stand-in environment described in Appendix A. Technology/runtime *details* (which built-in does what, module layout) belong in `architecture.md`; this document keeps only the runtime *decision* and its evidence.
 
 ---
 
@@ -61,8 +61,8 @@ A second, measured difference: given a 1184-byte ML-KEM public key consisting of
 | ID | Decision | Reason |
 |---|---|---|
 | D-01 | **`setup` replaces adapter state (new "generation"); it does not refuse or merge.** The audit log, the monotonic epoch counter and key history are append-only across generations. | v0.1 P0-04 said not to overwrite on a second `setup`. The contract says `setup` "initialize[s] from the supplied data", the toolkit's mock says "Setup resets practice state", and the official worker may run several scenarios in one container ("a fresh container starts empty" implies a container can serve more than one call sequence). A refuse-or-ignore `setup` would fail every later scenario. A replace-with-generation rule is safe either way. Flagged as open question Q1. |
-| D-02 | **`audit` for a reused `request_id` returns the most recent event for that ID within the current setup generation**, plus extra fields `attempts` and `event_seq`; earlier events are never overwritten. **[v0.3]** Events from earlier generations stay in the chain for verification but are not returned by `audit` (an ID unknown in the current generation gets the D-03 response). | Matches what a mock-validated harness expects (last write), while keeping every attempt as a distinct event (v0.1 P0-06). Generation scoping stops a request ID from a previous scenario returning a stale decision in a later one. |
-| D-03 | **`audit` for an unknown `request_id` returns `{"request_id":…,"decision":"deny","recorded":false}`**, never a bare error object. | `validate.py` rejects any `audit` response whose `decision` is not `allow`/`deny` as a *format* failure (exit 3). Deny-by-default is also consistent. Assumption; Q2. |
+| D-02 | **`audit` for a reused `request_id` returns the most recent event for that ID within the current setup generation**; earlier events are never overwritten. **[v0.4]** The response is exactly `{"request_id","decision"}` (D-16); attempt counts and sequence numbers are visible only in the audit log and CLI. **[v0.3]** Events from earlier generations stay in the chain for verification but are not returned by `audit` (an ID unknown in the current generation gets the D-03 response). | Matches what a mock-validated harness expects (last write), while keeping every attempt as a distinct event (v0.1 P0-06). Generation scoping stops a request ID from a previous scenario returning a stale decision in a later one. |
+| D-03 | **`audit` for an unknown `request_id` returns `{"request_id":…,"decision":"deny"}`**, never a bare error object. **[v0.4]** No `recorded` field (D-16); the fact that no event existed is written to the audit log as an `audit_lookup_miss` event. | `validate.py` rejects any `audit` response whose `decision` is not `allow`/`deny` as a *format* failure (exit 3). Deny-by-default is also consistent. Organizers left response shapes to us (Q2 answered). |
 | D-04 | **All client-supplied strings are stored as their JSON string encoding** (`JSON.stringify(value)`), never as raw SQLite TEXT. | Measured: in `node:sqlite`, a lone-surrogate identifier (`"\ud800"`) is silently stored as U+FFFD and then **collides** with a genuine `"\ufffd"` identifier (primary-key conflict); an identifier with an embedded NUL does not round-trip. `JSON.stringify` is injective for every JS string (escapes lone surrogates and NUL). Eleven edge-case identifiers (lone surrogates, NUL, newline-plus-fake-JSON, path traversal, SQL text, emoji, empty) all stored as distinct rows and round-tripped exactly. This fixes identity confusion without rejecting any "opaque" identifier the worker might send. |
 | D-05 | **Session resumption is "not supported"** (status `not supported` in the evidence sheet). P1-16 moves to P2-04. A cheap negative test replaces it: an old session ID or an old session key presented after revocation is rejected. | The brief says "if supported"; the evidence sheet defines `not supported`. A resumption mechanism is a classic critical finding if wrong and every finding costs 1–10 points in a 25-point category. |
 | D-06 | **Cutoff is defined by control-plane epoch, not wall-clock time.** The 30-second grace window is node-local, measured on a monotonic clock from the moment that node applies the cutoff entry, and covers only transfers already authenticated before cutoff. | Removes cross-node clock skew from the security boundary. |
@@ -72,8 +72,11 @@ A second, measured difference: given a 1184-byte ML-KEM public key consisting of
 | D-10 | **AES-GCM nonce policy:** session traffic uses deterministic nonces (direction + counter) from per-direction keys; DEK and envelope encryptions use one fresh random 96-bit nonce per fresh key. No key encrypts more than 2^32 messages with random nonces. | NIST SP 800-38D §8.3 limits random-IV use to 2^32 invocations per key; nonce reuse in GCM breaks confidentiality and integrity. |
 | D-11 | **Optional hybrid (P2-02) uses X-Wing as specified, or is not built.** | X-Wing (X25519 + ML-KEM-768, SHA3-256 combiner) is an active CFRG Internet-Draft, not a finished standard, so it stays P2. Node 24.11.1 has X25519 and SHA3-256, so it is buildable if time remains. |
 | D-12 | **Scope is sequenced into vertical slices with a hard P0-first gate** (Section 9). | See Section 9 and the objections listed there. |
-| D-13 **[v0.3]** | **Exit-code policy is per operation; a denial is never a crash.** `read`/`protected_read` internal error → `{"decision":"deny"}`, exit 0; `audit` → D-03 shape, exit 0; unknown `op` → `{"error":"unsupported_operation"}`, exit 0; `revoke` → non-zero exit, no acknowledgement; `setup` → non-zero unless quarantine and re-initialisation succeeded. | `validate.py` treats any non-zero exit as a fatal `setup` failure and stops all further checks. Only `revoke` (an unpersisted change must not be acknowledged) and a failed `setup` justify that. |
-| D-14 **[v0.3]** | **Adapter-stored bodies are not claimed confidential against state-directory access.** The adapter has no secret that does not live in the same `TRACK4_STATE_DIR`; any at-rest encryption of adapter bodies is described as protection against casual disclosure (exports, backups) only. `key_material` is never that key (P0-04). | Same reasoning as D-07: a key stored next to the ciphertext protects nothing from someone who can read both. Over-claiming here is a Threat-Model & Honesty deduction. |
+| D-13 **[v0.3]** | **Exit-code policy is per operation; a denial is never a crash.** `read`/`protected_read` internal error → `{"decision":"deny"}`, exit 0; `audit` → D-03 shape, exit 0; unknown `op` → `{"error":"unsupported_operation"}`, exit 0; `revoke` → non-zero exit, no acknowledgement; `setup` → non-zero unless quarantine and re-initialisation succeeded. **[v0.4]** Invalid *input* is not an internal error: unparseable stdin, invalid UTF-8, oversize or non-object requests, and invalid `setup`/`revoke` fields → `{"error":"invalid_request"}`, exit 0, state untouched; invalid `read`/`protected_read`/`audit` fields → their deny shape, exit 0. Full table: `architecture.md` §5.6. | `validate.py` treats any non-zero exit as a fatal `setup` failure and stops all further checks. Only `revoke` (an unpersisted change must not be acknowledged) and a failed `setup` justify that. |
+| D-14 **[v0.3, CHG v0.4]** | **The adapter stores bodies in plaintext SQLite and makes no at-rest confidentiality claim.** The adapter has no secret that does not live in the same `TRACK4_STATE_DIR`, so encrypting bodies there would be theatre; under D-15 the state directory is outside the Round 1 attacker's reach anyway. `key_material` is never used as a key (P0-04). At-rest encryption with keys held outside the service (P1-02) is a demo/CLI capability. | Same reasoning as D-07: a key stored next to the ciphertext protects nothing from someone who can read both. Over-claiming here is a Threat-Model & Honesty deduction. |
+| D-15 **[v0.4]** | **Round 1 threat scope is the input channel.** The adapter's attacker controls the JSON on stdin (any value, any size up to the cap, any number of sequential or parallel invocations) and observes stdout, stderr, exit codes and timing. An attacker who can read or write `TRACK4_STATE_DIR` or the repository between invocations is **out of scope for the adapter** and is stated as such in the threat model. Consequences: no adapter at-rest encryption (D-14); no audit-chain verification on every adapter start (`kig verify-log` does it offline); fail-closed handling of a corrupt/missing database stays, because it is also crash safety. | Every hint in the toolkit points to the input channel: the contract's rules are about identifiers, diagnostics and disclosure; `validate.py` and its tests probe only leaks (including nested), marker exposure, error text, exit codes, timeouts and stream limits; the demo README says actor values are trusted inputs. A state-directory attacker cannot be stopped by anything inside the container (read-only root, no external secret), so effort there has a low ceiling. |
+| D-16 **[v0.4]** | **Adapter responses use exactly the contract shapes, no extra fields.** `setup` → `{"ready":true}`; `read` → `{"decision":"allow","body":…}` or `{"decision":"deny"}`; `revoke` → `{}`; `audit` → `{"request_id":…,"decision":…}`; `protected_read` → `{"ciphertext":…,"proof":…}` or `{"decision":"deny"}`; unsupported → `{"error":"unsupported_operation"}`. | Hidden tests may compare responses strictly; extra fields add risk and can leak policy structure. Rich detail lives in the audit log and CLI. |
+| D-17 **[v0.4]** | **Two rounds, two surfaces.** Round 1 (automated: hidden test cases and exploits) runs only the repository-root adapter on an **ARM (aarch64)** Linux container with Node 24.11.1. Round 2 (judges) is presented through our `kig` CLI. | Organizer answers, 2026-11-26. S1 is the Round 1 deliverable; P1 is primarily Round 2 evidence. |
 
 ---
 
@@ -127,18 +130,7 @@ Both surfaces call the same policy, key-state, audit and detection modules.
 ### 2.2 Runtime (resolved — see 0.1)
 Node.js 24.11.1, CommonJS adapter `track4_service.cjs`, zero npm dependencies. Built-in modules only on the judging path: `node:crypto` (including `crypto.webcrypto`), `node:sqlite`, `node:fs`, `node:path`, `node:os`.
 
-Repository layout (proposed):
-```
-track4_service.cjs        # exactly one adapter at repo root (toolkit starter, unmodified transport)
-team_app.cjs              # dispatch() -> src/core
-src/core/                 # policy, key state, audit, detection  (shared by adapter and CLI)
-src/crypto/provider.cjs   # the ONLY module that imports node:crypto
-src/store/                # SQLite schema, migrations, transactions
-src/cli/                  # kig commands, 3-node simulation, crash-test, bench
-tests/                    # unit, negative, interop (dev-only Python+pqcrypto), crash tests
-threat-model.json         # only if accurate (P0-09)
-README.md  docs/  evidence/
-```
+**[v0.4]** Repository layout, tech stack and the complete request flows are defined in `architecture.md` (§2, §3, §5). The root adapter is the toolkit starter **adapted** in three places (warning suppression, bounded fatal-UTF-8 stdin read, `invalid_request` with exit 0 instead of exit 1 for unparseable input, D-13); the transport contract is otherwise unchanged.
 Dev/test-only dependency: Python 3.12 + `pqcrypto==0.4.0`, used solely by the cross-implementation interop test. It is not on the judging path and the test skips with a visible notice if absent.
 
 ---
@@ -152,21 +144,21 @@ Dev/test-only dependency: Python 3.12 + `pqcrypto==0.4.0`, used solely by the cr
 - Do not leave background child processes running. **[NEW]** The validator treats lingering output streams as a setup failure.
 - **[NEW]** `process.removeAllListeners('warning')` first thing, so experimental-feature warnings never reach stderr.
 - **[v0.3]** Per-operation failure handling follows D-13: internal errors in `read`/`protected_read`/`audit` produce a deny-shaped JSON response and exit 0; only `revoke` and a failed `setup` exit non-zero. A top-level handler (as in the toolkit starter) remains as the last resort for truly unexpected crashes: generic stderr line, non-zero exit. Exceptions must never turn into an `allow`.
-- **[v0.3]** A request that is not a JSON object, or has an unknown `op`, returns `{"error":"unsupported_operation"}` with exit 0 (the toolkit demo's shape).
+- **[v0.3, CHG v0.4]** A request with an unknown `op` returns `{"error":"unsupported_operation"}` with exit 0 (the toolkit demo's shape); unparseable, non-UTF-8, oversize or non-object input returns `{"error":"invalid_request"}` with exit 0 (D-13).
 - Implement `setup`, `read`, `revoke`, `audit`, `protected_read` with the contract's request/response semantics.
 
 Acceptance: `validate.py` can start the root adapter repeatedly; every valid request produces one parseable JSON object; stderr is empty on the success path; **[v0.3]** an injected internal error in `read`, `protected_read` and `audit` yields deny/exit 0, and in `revoke` yields non-zero exit with no state change.
 
 ### P0-02. Runtime and dependency compatibility
-- Target the exact organizer runtime: Node.js 24.11.1 on offline Linux.
+- Target the exact organizer runtime: Node.js 24.11.1 on offline Linux, **[v0.4] ARM64 (aarch64)**. The official `node-v24.11.1-linux-arm64` build exists (verified). All Appendix A measurements were taken on x86-64; `kig compat` and the performance numbers that go into the brief must be re-run on ARM64.
 - **[CHG]** `kig compat` re-runs the Appendix-A spike (ML-KEM raw-public import/encaps/decaps, ML-DSA-65 sign/verify with context, AES-GCM, HKDF with the RFC 5869 vector, HMAC, SQLite writes from separate processes, `kill -9` atomicity) and prints PASS/FAIL without secret material.
-- CI runs `kig compat` and the full test suite inside a `node:24.11.1` container, not only on developer machines.
+- CI runs `kig compat` and the full test suite inside a `node:24.11.1` container, not only on developer machines. **[v0.4]** The CI job runs on a native ARM64 runner (e.g. GitHub `ubuntu-24.04-arm`); emulated ARM (QEMU) is acceptable for correctness only, never for timing.
 - Do not assume the organizer installs anything from `package.json`; there is no `package.json` dependency list to install.
 
-Acceptance: compatibility test passes in the pinned container.
+Acceptance: compatibility test passes in the pinned container on ARM64.
 
 ### P0-03. Persistent state across process invocations
-- Use `TRACK4_STATE_DIR` when supplied, otherwise `os.tmpdir()`. The directory is created if missing (setup only).
+- Use `TRACK4_STATE_DIR` when supplied, otherwise `os.tmpdir()`. The directory is created if missing, by `setup` or **[v0.4]** by a `revoke` that arrives before any `setup` (a revocation must always be persisted before it is acknowledged).
 - Durable state in SQLite under that directory. **[CHG]** Connection settings: `timeout` (busy timeout) ≥ 5000 ms; `PRAGMA synchronous=FULL`; `PRAGMA foreign_keys=ON`; `PRAGMA user_version` schema check; `STRICT` tables.
 - **[v0.3] Journal mode is set once, by `setup` only:** `PRAGMA journal_mode=WAL` with a check that the returned mode is `wal`, falling back to `DELETE` if not (shared-memory files are not guaranteed on every filesystem). The mode persists in the database file; all other operations only *read* it and never change it. Reason (measured): when several processes open a new database concurrently, the journal-mode switch itself can throw `database is locked` despite the busy timeout (1 of 4 runs, one of eight processes lost).
 - **[v0.3] Bounded retry on busy:** opening the database and the first statement are retried on `SQLITE_BUSY`/`database is locked` (3 attempts, small random jitter). If still locked: `read`/`protected_read`/`audit` fail closed per D-13 (deny, exit 0); `revoke` exits non-zero without acknowledgement.
@@ -200,8 +192,9 @@ Interface limit (must appear in the threat model): the adapter's `actor` is a tr
 Acceptance: all public lost-device checks pass, including no content leakage on denial and peer access intact.
 
 ### P0-06. `audit` **[CHG]**
-- Durable decision recorded for every `read` and `protected_read`: request ID, actor, asset, decision, rule ID, event sequence — all stored via D-04.
-- `audit(request_id)` returns `{"request_id":…,"decision":…}` for the **most recent** event with that ID **in the current setup generation** (D-02, [v0.3]), plus optional `attempts` (count) and `event_seq`. Unknown ID (including one known only in an earlier generation) → D-03.
+- Durable decision recorded for every `read` and `protected_read`: request ID, actor, asset, decision, rule ID, event sequence — all stored via D-04. **[v0.4]** The contract's `protected_read` carries no `request_id`; an optional `request_id` is accepted and recorded if present, otherwise the event is recorded with a null request ID (and so cannot be returned by `audit`).
+- **[v0.4]** D-04 also applies to asset **bodies**: they are stored JSON-encoded so that bodies containing lone surrogates or NUL round-trip exactly.
+- `audit(request_id)` returns `{"request_id":…,"decision":…}` for the **most recent** event with that ID **in the current setup generation** (D-02, [v0.3]); **[v0.4]** no other fields (D-16). Unknown ID (including one known only in an earlier generation) → D-03.
 - A reused `request_id` creates a new event with a new sequence number; earlier events are never updated or deleted.
 - Audit events live in an append-only table, separate from mutable current-state rows. **[NEW]** Enforce with SQLite triggers that `RAISE(ABORT)` on `UPDATE`/`DELETE` of the audit table, so an application bug cannot rewrite history (a defence-in-depth measure, not a defence against someone with file access — see P1-08).
 - The decision row and its audit event commit in the same transaction.
@@ -233,6 +226,22 @@ Acceptance: independently reproduced shared secret and proof; a revoked actor ca
 - A malformed or corrupt security state must not result in an allow.
 
 Acceptance: negative tests cover missing fields, wrong types, long strings, quotes, newlines, path-like IDs, lone surrogates, NUL, prototype-key IDs, invalid and URL-safe Base64, wrong-length keys, oversized requests, unknown `op`, non-object requests, corrupt database, cold-start lock contention and marker leakage.
+
+### P0-10. Adapter self-monitoring **[v0.4]**
+Moved forward from P1-17 because Round 1 is adapter-only, and "detecting and responding during the assessment restores up to half the deduction" can only be earned there.
+- Every adapter invocation that looks hostile or anomalous writes an **alert event** into the same audit chain, in the same transaction as the decision: rule ID, severity, actor (D-04 encoded), asset, request ID, reason code. Never the offending payload itself beyond a bounded, encoded excerpt.
+- Alert rules (deterministic, explainable):
+  - `A-REVOKED-RETRY`: a revoked or disabled actor attempts `read`/`protected_read`.
+  - `A-CROSS-OWNER`: an actor requests an asset it does not own.
+  - `A-INVALID-INPUT`: request fails validation (wrong types, oversize, bad Base64, wrong key length).
+  - `A-INVALID-KEY`: ML-KEM public key fails the FIPS 203 import check.
+  - `A-HOSTILE-ID`: identifier contains control characters, NUL, lone surrogates, path or prototype-key patterns (still processed normally as an opaque ID; the alert is informational).
+  - `A-BURST`: ≥ N denials for the same actor within a sliding window (count from the audit table; N and window configurable, default 5 in 60 s).
+  - `A-STATE-FAULT`: database corrupt, missing or locked beyond retries.
+- **Response** is limited to what is safe and reversible: the decision itself is already deny; alerts never lock out an actor automatically (an auto-lock is a denial-of-service lever, P1-17). Alerts are visible through `kig alerts` and in the Round 2 demo.
+- Alerts never change adapter response shapes (D-16) and never add stdout/stderr output.
+
+Acceptance: each rule fires on its trigger and on nothing in the `validate.py` happy path; alert events are part of the verified audit chain; adapter responses are byte-identical with and without alerting.
 
 ### P0-09. Threat-model declaration and validator
 - The worker recognises two fields in a root-level `threat-model.json`: `asset` and `boundary`. Use them **only if accurate**. The toolkit's example value `identity-check` for `boundary` is **not** accurate for the adapter, whose actor is an unauthenticated trusted input. Until organizers answer Q3, **omit the file or include only values we can defend in writing**; never copy the example.
@@ -390,6 +399,7 @@ Acceptance: complete messages delivered despite recoverable loss/reordering; dup
 Evidence-sheet status: `not supported`. The threat model states that every connection performs a full handshake. The retained negative test: an old session ID or old session key presented after revocation or after session close is rejected. The original ticket design (one-time, identity-bound, server-keyed ticket) moves to P2-04.
 
 ### P1-17. Security self-monitoring and operator alerts
+**[v0.4]** The adapter-visible subset is now P0-10; this item covers the demo/CLI surface (nodes, rotation, backups, sessions).
 - Alert on: revoked actor/device attempts, old-key use after cutoff, stale-node access attempts, invalid backup restores, audit verification failures, repeated authentication failures.
 - **[NEW]** Automated responses (for example locking an identity after repeated failures) must be rate-limited and reversible, because an auto-lock is itself a denial-of-service lever against legitimate users.
 - Alert content: actor/device, node, target, event IDs, timestamps, policy/key epoch, severity, rule ID, outcome. Never imply a denied action succeeded.
@@ -407,6 +417,7 @@ Acceptance: controlled attack scenarios create the expected alert and a verifiab
 Acceptance: metrics from reproducible runs; nothing hard-coded; nothing claimed from 22 events alone.
 
 ### P1-19. Operator CLI and repeatable demo
+**[v0.4]** This is the Round 2 judging surface (D-17): the judges' view of every P1 goal is through these commands. A GUI is optional (P2-01).
 `kig demo`, `kig enrol`, `kig revoke`, `kig rotate`, `kig backup` / `kig restore`, `kig verify-log`, `kig detect`, `kig bench`, `kig crash-test`, **[NEW]** `kig compat`. `kig demo` prints narrated, reproducible PASS/FAIL outcomes with seeded synthetic identities only. **[NEW]** The demo must be runnable by a stranger from the README on a clean machine with only Node 24.11.1.
 
 ### P1-20. Performance and resource evidence
@@ -447,6 +458,7 @@ Acceptance: metrics from reproducible runs; nothing hard-coded; nothing claimed 
 12. No unsupported `threat-model.json` claims.
 13. **[NEW]** No claim about the organizer's container beyond what the adapter contract states. All measurements in this document come from a stand-in environment (Appendix A).
 14. **[v0.3]** No confidentiality claim for adapter-stored bodies against anyone who can read the state directory (D-14).
+15. **[v0.4]** No claim that the adapter resists an attacker who can modify or roll back `TRACK4_STATE_DIR` (D-15).
 
 ---
 
@@ -492,7 +504,7 @@ Design text is not evidence. The evidence-sheet status must reflect the result a
 
 ## 9. Build order, gates and scope risk **[NEW]**
 
-How the scoring appears to map to the work (my reading of the brief's Stage 1 table; the brief does not say which tests reach which interface, so the "adapter only" part is an inference from the toolkit's README, which says the other goals "need evidence beyond this local run"):
+How the scoring maps to the work. **[v0.4]** Organizers confirmed that Round 1 runs only the repository-root adapter, with hidden test cases and exploits, on an ARM container; Round 2 is judged through our CLI (D-17).
 
 | Stage 1 criterion | Largely decided by |
 |---|---|
@@ -506,7 +518,7 @@ Only the top 10 teams reach the desk review (live demo, technical questions, liv
 
 Vertical slices, each with a gate:
 1. **S0** `kig compat` + repo skeleton + CI in the pinned container. *Gate:* compat passes.
-2. **S1** P0 complete. *Gate:* `validate.py` exits 0; protected-read interop (25/25); negative suite (including the [v0.3] prototype-key, strict-Base64 and exit-code cases); concurrent-process tests (warm **and** cold-start, P0-03) and `kill -9` tests.
+2. **S1** P0 complete (**[v0.4] the Round 1 deliverable**, including P0-10 alerts). *Gate:* `validate.py` exits 0 on ARM64; protected-read interop (25/25); negative suite (including the [v0.3] prototype-key, strict-Base64 and exit-code cases); concurrent-process tests (warm **and** cold-start, P0-03) and `kill -9` tests.
 3. **S2** Audit chain, checkpoints, `verify-log` (everything else logs through it).
 4. **S3** Device identity, enrolment, envelopes, lost-device flow.
 5. **S4** Rotation, three-node revocation, lease, measurements.
@@ -521,17 +533,19 @@ Cut order if time runs short: P2 items, then detector graph extras beyond LM-1/L
 
 ---
 
-## 10. Open questions for organizers (ask now; blockers first)
-- **Q1.** Does the official worker call `setup` more than once against the same container/state directory (several scenarios)? D-01 assumes yes is possible.
-- **Q2.** Exact expected responses for: `audit` of an unknown request ID; a reused request ID; `protected_read` denial; an invalid ML-KEM public key. (D-02, D-03 and P0-07 are assumptions until answered.)
-- **Q2b [v0.3].** What should an unknown `op` or a non-object request return, and does the official worker, like `validate.py`, treat any non-zero exit as a failure? (D-13 assumes yes.)
-- **Q3.** What does the worker do with `threat-model.json` — is a mismatch penalised, and are values other than the example recognised?
-- **Q4.** Is the judging container x86-64 or ARM; is `/tmp` (or `TRACK4_STATE_DIR`) persistent across invocations and tmpfs-backed; does it allow WAL-mode SQLite?
-- **Q5.** Are Stage 2 live assessments run through the adapter, through our CLI/demo, or both; may the demo spawn three local node processes in the container?
+## 10. Questions for organizers
+**[v0.4] Answers received 2026-11-26:** container is ARM; Round 1 runs our repository entry point only (no CLI/GUI) with hidden test cases and exploits; Round 2 is judged through our CLI; the AI/ML ban means components in the code, AI-assisted development is fine; Node pinned at 24.11.1; assume SQLite WAL works; response JSON shapes are ours to decide; team capacity to be confirmed.
+
+- **Q1 (open).** Does the official worker call `setup` more than once against the same container/state directory (several scenarios)? D-01 handles both cases, so this is no longer a blocker.
+- ~~**Q2.**~~ **Answered:** response shapes are ours to decide → D-02, D-03, D-16.
+- ~~**Q2b.**~~ **Answered (ours to decide):** D-13 stands; we assume a strict worker.
+- **Q3 (open, low priority).** What does the worker do with `threat-model.json` — is a mismatch penalised, and are values other than the example recognised? Until answered, P0-09 applies (omit or only defensible values).
+- ~~**Q4.**~~ **Answered:** ARM; WAL works. Persistence of the temp directory across invocations is implied by the contract ("state that must survive between calls in the same container").
+- ~~**Q5.**~~ **Answered:** Round 1 adapter only; Round 2 through the CLI.
 - ~~**Q6.**~~ **Answered [v0.3]:** the `BUTTERFINGERS7498/trust-but-verify-toolkit` v1.0.0 ZIP and `ScalerOpenSourceLabs/Track-4-Toolkit` commit `8901dfb` are identical apart from CRLF line endings. No need to ask.
-- **Q7.** Is Node 24.11.1 also the runtime for the demo/CLI at the desk review?
-- **Q8 [v0.3].** Does the "AI/ML components" ban cover only components shipped in the prototype (our assumption), or development tooling as well?
-- **Q9 [v0.3].** Event duration and team-size limits (not stated on the official track page); this sets the Section 9 cut line.
+- ~~**Q7.**~~ **Answered:** Node 24.11.1.
+- ~~**Q8.**~~ **Answered:** the ban covers AI/ML components in the code; AI-assisted development is encouraged.
+- **Q9 (pending, organizers will inform).** Team capacity / event duration; sets the Section 9 cut line.
 
 ---
 
@@ -587,4 +601,6 @@ Cut order if time runs short: P2 items, then detector graph extras beyond LM-1/L
 | R12 | Lateral-movement rules simulated on `practice/events.csv` (corrected time, 60 s) | LM-1 per-actor cold start fires on `evt-007..009` and `evt-010..012`; global cold start only `evt-010..012` (margin 6 s); LM-3 N=2 fires on `evt-017/018`; N=3 only `evt-010..012` → P1-10 changes |
 | R13 | Whole-process latency, 40 runs (WSL is slower than the first sandbox) | Node empty p50 45 ms; Node with sqlite + ML-KEM encaps p50 55 ms / p95 59 ms; Python empty 29 ms; Python with pqcrypto + sqlite + encaps p50 35 ms / p95 42 ms. Gap consistent with item 17; informational |
 
-**Not tested, and therefore not claimed:** the organizer's actual judging container (CPU architecture, filesystem, tmpfs/WAL behaviour, read-only root); the official worker's behaviour; Node 24.11.1 under a read-only root filesystem; Node ↔ `pqcrypto` ML-DSA signature interoperability (not required by the adapter contract); multi-node simulation; any detection metric.
+**[v0.4] All Appendix A results are from x86-64. The judging container is ARM64; they must be re-run there (P0-02).**
+
+**Not tested, and therefore not claimed:** the organizer's actual judging container (ARM64 per organizers; filesystem, tmpfs/WAL behaviour, read-only root); the official worker's behaviour; Node 24.11.1 under a read-only root filesystem; Node ↔ `pqcrypto` ML-DSA signature interoperability (not required by the adapter contract); multi-node simulation; any detection metric.

@@ -18,10 +18,16 @@ Node.js **24.11.1**. Nothing else: there are no npm dependencies to install. *(F
 
 ## Development
 
+Works the same on Windows (PowerShell, cmd, Git Bash), WSL, Linux and macOS. All helper scripts are Node scripts; there are no shell scripts.
+
+- Install Node.js 24.11.1 (Windows: the official installer or `nvm-windows`; Linux/WSL/macOS: `nvm install` reads `.nvmrc`).
+- Clone the organizer toolkit next to this repo: `git clone https://github.com/ScalerOpenSourceLabs/Track-4-Toolkit ../Track-4-Toolkit` (or set `TOOLKIT_DIR`).
 - `npm test`: all tests (`node --test`).
 - `npm run compat`: runtime self-check.
-- `npm run validate`: the organizer toolkit's `validate.py` against the root adapter (expects the toolkit at `../Track-4-Toolkit`, or set `TOOLKIT_DIR`).
-- `npm run judge -- <cmd>`: runs `<cmd>` inside a replica of the judging container (ARM64, read-only root, offline, writable `/tmp` only). Needs Docker.
+- `npm run validate`: the toolkit's `validate.py` against the root adapter (needs Python 3.10+; output saved to `evidence/`).
+- `npm run judge -- <cmd>`: runs `<cmd>` inside a replica of the judging container (linux/arm64, Node 24.11.1, read-only root, no network, writable `/tmp` only). Needs Docker Desktop. On x86 machines ARM is emulated: correct but slow, so never use its timings. Examples: `npm run judge -- node kig.cjs compat`, `npm run judge -- npm test`, `npm run judge -- node scripts/validate.cjs`.
+
+The judging container is Linux: the replica (and CI on native ARM64) is the source of truth, not a Windows run.
 
 ## Testing
 

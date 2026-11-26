@@ -60,8 +60,7 @@ function recordAck(cpDb, ack, env = process.env) {
   return true;
 }
 
-function publish(cpDb) {
-  const env = process.env;
+function publish(cpDb, { env = process.env } = {}) {
   const L = layout(require('../core/contracts.cjs').kigHome(env));
   const privateKey = provider.importPrivate(fs.readFileSync(L.cp.keys.policy.key));
   let signed;

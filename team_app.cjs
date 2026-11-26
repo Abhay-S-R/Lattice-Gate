@@ -1,6 +1,4 @@
-// Replace this stub with calls into your submitted implementation.
-// Keep logs off stdout and persist state across process invocations.
 'use strict';
-exports.dispatch = async function dispatch(request) {
-  throw new Error('Connect dispatch to your application');
-};
+// Team application boundary for the Round 1 transport (track4_service.cjs).
+// All behaviour lives in src/adapter/index.cjs; nothing here writes to stdout or stderr.
+exports.handleRaw = (buf) => require('./src/adapter/index.cjs').handleRaw(buf, process.env);

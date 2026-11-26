@@ -110,7 +110,7 @@ docs/brief/video-script.md            5-minute narration and shot list          
   - It writes one `<check>.txt` (or `.json` when the command printed JSON) per check, and `SUMMARY.md` with environment, commit, UTC time, and a table of check, command, exit code, duration and status.
   - Exit code = number of failed checks.
   - `--no-judge` runs the same commands natively, for quick local use. `SUMMARY.md` then says `native, not the judging replica`.
-- `tests/e2e/msg-demo.test.cjs`: spawns `node kig.cjs msg demo --seed <s>` for 2026 and 42. It asserts exit 0, 12 `PASS` lines, no `FAIL`, and the line `Session resumption: NOT SUPPORTED (D-05)`.
+- `tests/e2e/msg-demo.test.cjs`: spawns `node kig.cjs msg demo --seed <s>` for 2026 and 42. It asserts exit 0, 13 `PASS` lines, no `FAIL`, and the line `Session resumption: NOT SUPPORTED (D-05)`.
 
 - [ ] **Step 1:** Write `tests/e2e/msg-demo.test.cjs`. Run it. Expected: PASS (the demo already exists).
 - [ ] **Step 2:** Write `scripts/walkthrough-adapter.cjs` (setup → read allow → revoke → read deny → audit → `keys init` → `checkpoint` → `verify-log` → `alerts`, all inside `os.tmpdir()`).
@@ -192,7 +192,7 @@ docs/brief/video-script.md            5-minute narration and shot list          
 | 8 | Backup; flip a byte → `digest_mismatch`; truncate → `digest_mismatch`; an older backup (taken in step 3) → `stale_backup`; the good backup restores | 4 | registry byte-identical after each refusal; after the restore and `up`, Bob reads and `verify-log` is OK |
 | 9 | `verify-log` on the CP and the three node stores; tamper a **copy** (P7-D9); injection actor | 5 | live stores `OK`; copy gives `BROKEN seq=<n> content_edit`; an actor named `x\n{"actor":"admin"}` is one event with that exact actor |
 | 10 | `detect` on the practice data; `bench detect` with small seeds | 6, 7, 8 | exactly 2 alerts (`PRIV-1` user-blair, evt-008/009; `LM-1` svc-report-worker, evt-010..012, all denied); evt-015 corrected to 09:06:01.000Z; evt-013 before evt-014; evt-017/018 `expected_enforcement`; evt-020 no alert; held-out metrics printed (seeds 201, 202) |
-| 11 | `msg demo` (seed from `--seed`, default 2026) | 9, 10, 11, 12 | all 12 PASS lines; `Session resumption: NOT SUPPORTED (D-05)` printed as **not supported**, not as a pass |
+| 11 | `msg demo` (seed from `--seed`, default 2026) | 9, 10, 11, 12 | all 13 PASS lines; `Session resumption: NOT SUPPORTED (D-05)` printed as **not supported**, not as a pass |
 | 12 | `alerts` across CP, nodes and a small Round 1 adapter run | self-monitoring | at least: node revoked-device retry, `A-REVOKED-RETRY` on the adapter, the restore refusals; identifiers escaped |
 
 - [ ] **Step 1:** Export `crashCpAt(home, env, point)` from `src/cli/crash-test.cjs`, with no change in behaviour. Run `tests/crash/rotation-crash.test.cjs`. Expected: PASS.

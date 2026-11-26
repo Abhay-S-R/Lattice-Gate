@@ -450,9 +450,9 @@ async function runDemo({ values, io }) {
       const m = ok(['msg', 'demo', '--seed', String(seed)]);
       const lines = m.stdout.trim().split(/\r?\n/);
       const passes = lines.filter((l) => l.startsWith('PASS '));
-      assert.equal(passes.length, 12);
+      assert.equal(passes.length, 13);
       assert.ok(lines.includes('Session resumption: NOT SUPPORTED (D-05)'));
-      detail(`12/12 messaging checks passed (seed ${seed}): mutual PQ handshake, AAD recipient binding, replay cache, chunked loss/reordering, forward secrecy`);
+      detail(`13/13 messaging checks passed (seed ${seed}): mutual PQ handshake, AAD & recipient-field tamper rejection, replay cache, chunked loss/reordering, forward secrecy`);
       detail('Goal 12 session resumption: NOT SUPPORTED (D-05) — old session IDs/keys after close or revocation rejected');
     },
 

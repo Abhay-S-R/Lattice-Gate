@@ -10,12 +10,13 @@ const EXPECTED_SUBSTRINGS = [
   'tampered M2 signature transcript and key-confirmation MAC are rejected',
   'wrong initiator key-confirmation MAC is rejected',
   'authenticated ephemeral KEM handshake, transcript signatures, and mutual key confirmation',
+  'tampered recipient-device field is rejected',
   'wrong recipient, altered AAD, and duplicate record are rejected',
   'transport receipt:',
   'reassembly complete: 1 message',
   'application delivery: exact message delivered once despite loss, duplication, and reordering',
   'incomplete message expires; message-size and buffer limits fail closed',
-  'closed-session replay rejected; later signing-key exposure cannot recover ephemeral traffic keys',
+  'forward secrecy: recorded ciphertext remains unreadable after signing-key exposure and session close',
   'revoked device cannot establish or continue a session',
 ];
 
@@ -28,7 +29,7 @@ for (const seed of [2026, 42]) {
     const passLines = lines.filter((l) => l.startsWith('PASS '));
     const failLines = lines.filter((l) => l.startsWith('FAIL'));
     assert.equal(failLines.length, 0, `unexpected FAIL lines: ${failLines.join('; ')}`);
-    assert.equal(passLines.length, 12, `expected 12 PASS lines, got ${passLines.length}:\n${res.stdout}`);
+    assert.equal(passLines.length, 13, `expected 13 PASS lines, got ${passLines.length}:\n${res.stdout}`);
     for (const sub of EXPECTED_SUBSTRINGS) {
       assert.ok(passLines.some((l) => l.includes(sub)), `missing check "${sub}" in:\n${res.stdout}`);
     }

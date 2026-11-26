@@ -14,6 +14,7 @@ const healthRoute = (id) => id === 'cp' ? ROUTES.cp.health : ROUTES.node.health;
 const endpoint = (id, ps) => url(ps[serviceKey(id)]);
 const healthUrl = (id, ps) => `${endpoint(id, ps)}${healthRoute(id).slice(healthRoute(id).indexOf(' ') + 1)}`;
 const pidFile = (L, id) => L.run.pid(id);
+const controlFile = (L, id) => path.join(path.dirname(L.run.pid(id)), `${id}.control`);
 
 function readRecord(file) {
   try {
@@ -54,6 +55,7 @@ async function stop(home = kigHome(), env = process.env) {
       if (await probe(id, record, ps, 100)) throw new Error(`${id} did not stop`);
     }
     try { fs.unlinkSync(file); } catch (e) { if (e.code !== 'ENOENT') throw e; }
+    if (id !== 'cp') try { fs.unlinkSync(controlFile(L, id)); } catch (e) { if (e.code !== 'ENOENT') throw e; }
   }
 }
 
@@ -64,7 +66,7 @@ async function start(home = kigHome(), env = process.env, { nodes = NODE_IDS } =
   const L = layout(home), ps = ports(env);
   fs.mkdirSync(path.dirname(L.run.pid('cp')), { recursive: true });
   const existing = await status(home, env);
-  if (existing.every((s) => s.healthy)) return existing;
+  if (existing.every((s) => s.healthy) && NODE_IDS.every((id) => fs.existsSync(controlFile(L, id)))) return existing;
   if (existing.some((s) => s.healthy || s.pid)) await stop(home, env);
 
   const launched = [];
@@ -75,7 +77,12 @@ async function start(home = kigHome(), env = process.env, { nodes = NODE_IDS } =
       const fd = fs.openSync(logfile, 'a', 0o600);
       const childEnv = { ...env, KIG_HOME: path.resolve(home), KIG_PORT_BASE: String(ps.cp), KIG_INSTANCE_TOKEN: instance };
       const args = [path.join(ROOT, 'src', id === 'cp' ? 'cp/server.cjs' : 'node/server.cjs')];
-      if (id !== 'cp') childEnv.KIG_NODE_ID = id;
+      if (id !== 'cp') {
+        childEnv.KIG_NODE_ID = id;
+        const controlToken = cryptoProvider.random(32).toString('hex');
+        fs.writeFileSync(controlFile(L, id), `${controlToken}\n`, { mode: 0o600 });
+        childEnv.KIG_NODE_CONTROL_TOKEN = controlToken;
+      }
       let child;
       // The service uses absolute module paths and KIG_HOME; a normal local cwd
       // also keeps Windows from trying to launch children from a UNC directory.

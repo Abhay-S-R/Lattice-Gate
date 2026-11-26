@@ -7,6 +7,8 @@ const { openDb } = require('../store/db.cjs');
 const policyRoutes = require('./routes-policy.cjs');
 const authRoutes = require('./routes-auth.cjs');
 const fileRoutes = require('./routes-files.cjs');
+const controlRoutes = require('./routes-control.cjs');
+const alerts = require('./alerts.cjs');
 
 function start({ env = process.env } = {}) {
   const id = env.KIG_NODE_ID;
@@ -18,8 +20,9 @@ function start({ env = process.env } = {}) {
   const route = new Map([
     [ROUTES.node.health, async () => ({ status: 200, json: { status: 'ok', service: 'node', node_id: id, instance: env.KIG_INSTANCE_TOKEN || null } })],
     ...policyRoutes.routes(db, { id, privateKey, cpPub, env }),
-    ...authRoutes.routes(db),
-    ...fileRoutes.routes(db),
+    ...authRoutes.routes(db).map(([name, handler]) => [name, alerts.wrap(db, id, handler)]),
+    ...fileRoutes.routes(db).map(([name, handler]) => [name, alerts.wrap(db, id, handler)]),
+    ...controlRoutes.routes(db, { env }),
   ]);
   const server = serve(ports(env)[id], route);
   const stopPull = policyRoutes.startPullLoop(db, { id, env, cpPub });

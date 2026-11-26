@@ -5,6 +5,7 @@ const { layout, kigHome, ports, url, ROUTES, SNAPSHOT } = require('../core/contr
 const { encode } = require('../core/encoding.cjs');
 const provider = require('../crypto/provider.cjs');
 const policy = require('./policy.cjs');
+const lease = require('./lease.cjs');
 const { call } = require('../core/http.cjs');
 const POLICY_PUSH_ROUTE = 'POST /v1/policy';
 
@@ -14,6 +15,7 @@ function signedAck(id, epoch, privateKey) {
 function routes(db, { id, privateKey, cpPub, env = process.env }) {
   const push = async (body) => {
     if (!body || typeof body !== 'object' || Array.isArray(body)) return { status: 400, json: { error: 'bad_request' } };
+    if (lease.isPartitioned(db)) return { status: 200, json: { applied: false, reason: 'partitioned' } };
     const result = policy.applySnapshot(db, body, cpPub);
     if (result.reason === 'bad_signature' || result.reason === 'invalid_snapshot') {
       return { status: 400, json: { error: 'bad_policy' } };
@@ -50,6 +52,7 @@ function ensureNodeKey(home, id) {
 }
 
 async function syncOnce(db, { id, env = process.env, cpPub }) {
+  if (lease.isPartitioned(db)) return { synced: false, reason: 'partitioned' };
   const cp = url(ports(env).cp);
   const nonce = provider.random(SNAPSHOT.headNonceBytes);
   const headResponse = await call(`${cp}${ROUTES.cp.policyHead.split(' ')[1]}?nonce=${nonce.toString('hex')}`, 'GET', null);

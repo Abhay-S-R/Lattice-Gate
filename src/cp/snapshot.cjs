@@ -44,7 +44,7 @@ function latest(cpDb) {
   return row ? { snapshot: JSON.parse(row.body), sig: Buffer.from(row.sig) } : null;
 }
 
-function recordAck(cpDb, ack, env = process.env) {
+function recordAck(cpDb, ack, env = process.env, arrivedMonoNs = process.hrtime.bigint().toString()) {
   if (!ack || !NODE_IDS.includes(ack.node_id) || !Number.isSafeInteger(ack.epoch) || typeof ack.sig !== 'string') return false;
   const file = layout(require('../core/contracts.cjs').kigHome(env)).node(ack.node_id).key.pub;
   let valid = false;
@@ -55,8 +55,13 @@ function recordAck(cpDb, ack, env = process.env) {
   } catch { return false; }
   if (!valid) return false;
   if (!cpDb.prepare('SELECT 1 FROM snapshots WHERE epoch=?').get(ack.epoch)) return false;
-  tx(cpDb, () => cpDb.prepare('INSERT INTO node_acks(node_id,epoch,acked_ms,sig) VALUES(?,?,?,?) ON CONFLICT(node_id,epoch) DO UPDATE SET acked_ms=excluded.acked_ms,sig=excluded.sig')
-    .run(ack.node_id, ack.epoch, Date.now(), Buffer.from(ack.sig, 'base64')));
+  // M4 adds a host-monotonic receipt time for benchmark measurements. Upgrade
+  // existing M3 homes lazily; the previous nullable history remains readable.
+  if (!cpDb.prepare('PRAGMA table_info(node_acks)').all().some((column) => column.name === 'acked_mono_ns')) {
+    tx(cpDb, () => cpDb.exec('ALTER TABLE node_acks ADD COLUMN acked_mono_ns TEXT'));
+  }
+  tx(cpDb, () => cpDb.prepare('INSERT INTO node_acks(node_id,epoch,acked_ms,acked_mono_ns,sig) VALUES(?,?,?,?,?) ON CONFLICT(node_id,epoch) DO UPDATE SET acked_ms=excluded.acked_ms,acked_mono_ns=excluded.acked_mono_ns,sig=excluded.sig')
+    .run(ack.node_id, ack.epoch, Date.now(), String(arrivedMonoNs), Buffer.from(ack.sig, 'base64')));
   return true;
 }
 

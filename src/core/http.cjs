@@ -49,14 +49,14 @@ function serve(port, routes, { maxBodyBytes = HTTP.maxBodyBytes } = {}) {
 }
 
 /** @param {string} address Full URL, including the route path. @param {string} method @param {unknown} json @param {{timeoutMs?:number}} [options] */
-function call(address, method, json, { timeoutMs = HTTP.timeoutMs } = {}) {
+function call(address, method, json, { timeoutMs = HTTP.timeoutMs, headers = {} } = {}) {
   if (!/^(GET|POST|PUT|DELETE)$/.test(method)) return Promise.reject(new TypeError('invalid method'));
   const url = new URL(address);
   const payload = json === null || json === undefined ? null : Buffer.from(JSON.stringify(json));
   return new Promise((resolve, reject) => {
     const req = http.request(url, {
       method,
-      headers: payload ? { 'content-type': 'application/json', 'content-length': payload.length } : {},
+      headers: { ...(payload ? { 'content-type': 'application/json', 'content-length': payload.length } : {}), ...headers },
       timeout: timeoutMs,
     }, (res) => {
       const chunks = [];

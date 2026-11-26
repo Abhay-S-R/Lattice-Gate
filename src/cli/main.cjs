@@ -47,18 +47,20 @@ const benchDetectCli = require('./bench-detect.cjs');
 const bench = {
   name: 'bench',
   describe: `benchmarks; 'bench detect': ${benchDetectCli.describe}`,
-  usage: benchDetectCli.USAGE.trimEnd(),
-  options: benchDetectCli.options,
+  usage: 'usage: node kig.cjs bench detect --seeds <list> --holdout <list> [options]\n       node kig.cjs bench revocation --n 100 --seed <s> [--out <file>] [--json]',
+  options: { ...benchDetectCli.options, n: { type: 'string' }, seed: { type: 'string' } },
   run: ({ values, positionals }) => {
-    if (positionals.length !== 1 || positionals[0] !== 'detect') throw new UsageError("expected 'bench detect'");
-    return benchDetectCli.run(values);
+    if (positionals.length !== 1) throw new UsageError("expected 'bench detect' or 'bench revocation'");
+    if (positionals[0] === 'detect') return benchDetectCli.run(values);
+    if (positionals[0] === 'revocation') return require('./bench-revocation.cjs').run(values);
+    throw new UsageError("expected 'bench detect' or 'bench revocation'");
   },
 };
 
 const supervisor = require('./supervisor.cjs');
 for (const mod of [compat, require('./verify-log.cjs'), require('./keys.cjs'), require('./checkpoint.cjs'), require('./alerts.cjs'),
   require('./init.cjs'), require('./account.cjs'), require('./device.cjs'), require('./file.cjs'), require('./share.cjs'),
-  require('./revoke.cjs'),
+  require('./revoke.cjs'), require('./node.cjs'),
   detect, bench, supervisor.up, supervisor.down, supervisor.statusCommand]) {
   COMMANDS.set(mod.name, mod);
 }

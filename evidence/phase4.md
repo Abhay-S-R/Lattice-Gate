@@ -1,6 +1,6 @@
 # Phase 4 evidence: rotation, lost-device re-key, crash recovery, backups (Gate 4)
 
-Code under test: commit `cca2fa5` (branch `phase-4-rotation` merged with `main`, which includes Phase 6 messaging). The same checks first passed on the Phase 4 branch alone at `6984769` (files `*-6984769.txt`). Every command below ran inside the judging-container replica (`node scripts/judge.cjs …`): linux/amd64 (x86-64, native), Node.js v24.11.1, OpenSSL 3.5.4, SQLite 3.50.4, read-only root, no network, writable `/tmp` only. Plan and design decisions: [`docs/plans/phase-4.md`](../docs/plans/phase-4.md).
+Code under test: commit `83f2294` (branch `phase-4-rotation`, merged with `main` incl. Phase 6 messaging, with D12 revised to add tables in place). Earlier passing runs of the same checks: `6984769` (Phase 4 alone) and `cca2fa5` (after the merge, before the D12 revision); their logs are kept as `*-6984769.txt` and `*-cca2fa5.txt`. Every command below ran inside the judging-container replica (`node scripts/judge.cjs …`): linux/amd64 (x86-64, native), Node.js v24.11.1, OpenSSL 3.5.4, SQLite 3.50.4, read-only root, no network, writable `/tmp` only. Plan and design decisions: [`docs/plans/phase-4.md`](../docs/plans/phase-4.md).
 
 Specs: features P1-03 (re-key half), P1-04, P1-06, P1-07, D-06, D-07; architecture §11–§13, §17.2.
 
@@ -8,10 +8,10 @@ Specs: features P1-03 (re-key half), P1-04, P1-06, P1-07, D-06, D-07; architectu
 
 | Gate item | Result | Evidence |
 |---|---|---|
-| §17.2 demo steps 4–8 as one scripted test | **PASS** (34.3 s, including the real 30 s grace) | `tests/e2e/phase4-demo.test.cjs`, [`phase4-npm-test-cca2fa5.txt`](phase4-npm-test-cca2fa5.txt) |
-| `kig crash-test` at all 5 crash points | **PASS 5/5** | [`crash-test-cca2fa5.txt`](crash-test-cca2fa5.txt) |
-| Full suite | **413 tests, 413 pass, 0 fail, 0 skipped** (Phase 1–5 included) | [`phase4-npm-test-cca2fa5.txt`](phase4-npm-test-cca2fa5.txt) |
-| Round 1 adapter untouched | **PASS** `Local scenario passed.` | [`validate-cca2fa5.txt`](validate-cca2fa5.txt) |
+| §17.2 demo steps 4–8 as one scripted test | **PASS** (34.3 s, including the real 30 s grace) | `tests/e2e/phase4-demo.test.cjs`, [`phase4-npm-test-83f2294.txt`](phase4-npm-test-83f2294.txt) |
+| `kig crash-test` at all 5 crash points | **PASS 5/5** | [`crash-test-83f2294.txt`](crash-test-83f2294.txt) |
+| Full suite | **414 tests, 414 pass, 0 fail, 0 skipped** (Phase 1–5 included) | [`phase4-npm-test-83f2294.txt`](phase4-npm-test-83f2294.txt) |
+| Round 1 adapter untouched | **PASS** `Local scenario passed.` | [`validate-83f2294.txt`](validate-83f2294.txt) |
 
 ## 2. What each demo step showed (one cluster: CP + nodes A, B, C)
 

@@ -110,8 +110,6 @@ const BACKUP = freeze({
   context: CONTEXTS.backup, files: ['manifest.json', 'manifest.sig', 'wrap.bin', 'payload.bin'],
   failures: ['bad_signature', 'unsupported_schema', 'digest_mismatch', 'stale_backup', 'decrypt_failed', 'incomplete_backup'],
 });
-// registry.db and node.db moved to schema 2 in Phase 4; device stores stay at the Phase 3 base version.
-const STORE_VERSIONS = freeze({ registry: 2, node: 2, device: 1 });
 const REGISTRY_API = Object.freeze(['listDevices', 'listGrants', 'listFiles', 'getDevice']);
 const SNAPSHOT_API = Object.freeze(['buildSnapshot', 'publish', 'current']);
 const TABLES = freeze({
@@ -142,5 +140,5 @@ const TEST_HELPERS = Object.freeze(['freshHome', 'startCluster']);
 module.exports = freeze({
   kigHome, layout, ports, url, LOOPBACK, NODE_IDS, STORE_BASE, SNAPSHOT, REQUEST,
   ENROL, WRAP, REGISTRY_API, SNAPSHOT_API, TABLES, HTTP, ROUTES, RULES,
-  DEVICE_STATUS, COMMANDS, TEST_HELPERS, ROTATION, BACKUP, STORE_VERSIONS,
+  DEVICE_STATUS, COMMANDS, TEST_HELPERS, ROTATION, BACKUP,
 });

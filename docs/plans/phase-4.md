@@ -30,7 +30,7 @@ All of these must pass locally **and** in `npm run judge -- …` (linux/amd64, r
 |---|---|---|
 | P4-D1 | **Rotation runs inside the CP process** (`POST /v1/files/rotate`); `kig rotate` and `kig lost` are thin clients. | Architecture §12.3: "the CP `SIGKILL`s itself at that exact point". Crash injection must kill the process that owns the journal. |
 | P4-D2 | **Staging goes over signed HTTP** (`POST /v1/stage`, `POST /v1/stage/drop`), not direct DB writes. The CP signs `{op, rotation_id, file_id, version, content digest}` with its policy key (ctx `kig/v1/revocation`); the node verifies it, stores, and answers with an ack signed by its node key over the same digest. | §12.1 needs real per-node staged acks; "missing node ack aborts before commit" is only testable if an unreachable or partitioned node cannot ack. Publish/share keep Phase 3's direct writes. |
-| P4-D3 | **COMMIT is one CP transaction:** active version, old version → `retiring`, cutoff row, signed snapshot `E` and journal `COMMIT` together. | `from_epoch` is then exactly the epoch of the snapshot that first carries the cutoff, and roll-forward can re-push a durable `E`. |
+| P4-D3 | **COMMIT is one CP transaction:** active version, old version → `retired`, cutoff row, signed snapshot `E` and journal `COMMIT` together. | `from_epoch` is then exactly the epoch of the snapshot that first carries the cutoff, and roll-forward can re-push a durable `E`. |
 | P4-D4 | **Version numbers are never reused.** Next version = max(active, any journalled target) + 1. | An aborted v+1 that a node failed to drop can never be confused with a later committed version. Stage acks also bind the content digest. |
 | P4-D5 | **Chunk fetch is `POST /v1/transfer/chunk {transfer_id, index}`**, not `GET /v1/transfer/<id>/chunk/<n>`. | `core/http.cjs` routes are exact `METHOD path` matches. Keeping the 32-byte bearer transfer ID out of URLs also keeps it out of any access log. The plan row is updated. |
 | P4-D6 | **Rule names:** the node keeps the Phase 3 rule `old_key_version` for "new request names a version that is not active" (architecture §12.2 calls it `old_key_after_cutoff`). New rules: `transfer_unknown`, `transfer_terminated`, `grace_expired`, `transfer_expired`. | Phase 3 contracts, auth and the N-OLD-KEY alert already use `old_key_version`. |
@@ -39,26 +39,26 @@ All of these must pass locally **and** in `npm run judge -- …` (linux/amd64, r
 | P4-D9 | **File size cap 256 KiB** at publish and rotation. | A stage message (base64 ciphertext plus envelopes) must fit the 1 MiB HTTP body cap. Stated as a limit. |
 | P4-D10 | **Newly approved devices are provisioned:** after `kig device approve`, the CP issues that device an envelope for the active version of every file granted to its account. | Without it a replacement device enrolled after `kig lost` re-keyed the file could never read it. Only an approved, active device gets one. |
 | P4-D11 | **COMMIT checks the device set:** if any device holding a v+1 envelope is no longer active, or an active device of a granted account has none, the rotation aborts (`device_set_changed`). | A revocation or approval racing a rotation can never leave a revoked device with an envelope for the new version, or a new device without one. |
-| P4-D12 | **Store schema version 2** for `registry.db` and `node.db` (new tables; `file_versions.status` gains `retiring`). Device stores and the adapter stay at 1. Old Phase 3 homes are refused with a schema error; recreate them with `kig init --force`. | Same rule as Phase 3: no migrations before release. The adapter (Round 1, frozen) is not touched. |
+| P4-D12 | **No schema version bump: Phase 4 tables are added in place.** Every store stays at version 1. `ensurePhase4(db)` (in `schema-cp.cjs` / `schema-node.cjs`) creates any missing Phase 4 table with `CREATE … IF NOT EXISTS` when the CP or a node starts and before any code touches those tables, so CLI commands on an older home upgrade it too. No existing table changes: `file_versions` keeps its Phase 3 `CHECK`, and "retiring" is not stored — an old version is `retired` at commit, and whether it is still inside its grace window follows from `file_cutoffs` (nodes enforce it). *Revised:* the first version bumped `registry.db`/`node.db` to 2 and refused Phase 3 homes. | The team's established approach: Phase 3 added `node_acks.acked_mono_ns` lazily, Phase 6 adds its messaging tables with `ensureMessaging()`. Existing homes keep working with no re-init (tested: `tests/unit/phase4-upgrade.test.cjs`). Trade-off: version 1 cannot flag a store as too old; if a future change must rewrite an existing table, bump the version then, with a real migration. |
 | P4-D13 | **Node anti-rollback uses a high-water file** `node.db.epoch` next to the store, written atomically after every applied snapshot. A node whose store is behind it fails closed (lease invalid) and refuses any snapshot older than it. | §12.3 extra rules, P1-06 [NEW]. A copy of an old `node.db` alone cannot resurrect a revoked device. Limit: an attacker who controls the whole node directory is out of scope. |
 | P4-D14 | **Backup payload = registry snapshot (`VACUUM INTO`) + CP key files** (policy, audit, backup, master KEM), and `kig backup` raises `min_backup_epoch` in `anchor/keys.json`. | P1-07 "encrypted key material/state"; §13.2 check 6 "contains the required key material"; check 4 "minimum pinned in the anchor". |
 | P4-D15 | **Restore validates in a temp directory** (checks 1–6) and touches live state only in step 7: stop the cluster if it runs → quarantine (rename, never delete) the live registry and its WAL/SHM → rename the validated file into place → write key files atomically → restart if it was running (CP start runs recovery). | "Live state untouched" after any failed check. |
 
 ---
 
-## 3. Data model (schema v2)
+## 3. Data model (Phase 4 additions; stores stay at schema version 1)
 
 `registry.db` adds:
 
 ```sql
-file_versions.status CHECK IN ('staged','active','retiring','retired')
+(file_versions unchanged from Phase 3: status 'staged' | 'active' | 'retired')
 rotation_journal(rotation_id, phase, file_id, from_version, to_version, epoch, reason, ts_ms,
                  PRIMARY KEY(rotation_id, phase))       -- phases PREPARE REWRAP STAGE COMMIT DISTRIBUTE COMPLETE ABORTED
 rotation_stage_acks(rotation_id, node_id, digest, sig, acked_ms, PRIMARY KEY(rotation_id, node_id))
 file_cutoffs(file_id PRIMARY KEY, old_version, from_epoch, grace_ms, committed_ms)
 ```
 
-`node.db` adds:
+`node.db` adds (all Phase 4 objects use `CREATE … IF NOT EXISTS` and are added in place by `ensurePhase4`, P4-D12):
 
 ```sql
 cutoffs(file_id, old_version, from_epoch, grace_ms, applied_mono_ns, applied_ms, PRIMARY KEY(file_id, old_version))
@@ -72,11 +72,11 @@ Snapshot `files[].cutoff` becomes `null | { old_version, from_epoch, grace_ms }`
 
 ## 4. Tasks
 
-### Task 4.0: Contracts and schema v2
+### Task 4.0: Contracts and Phase 4 tables
 
 **Files:** `src/core/contracts.cjs`, `src/store/schema-cp.cjs`, `src/store/schema-node.cjs`, `tests/unit/contracts.test.cjs`.
-- Add `ROTATION` (phases, crash points, grace 30 000 ms, chunk 16 KiB, max file 256 KiB, stage/ack labels, transfer TTL), `STORE_VERSIONS`, new routes and rules; Phase 4 tables under `TABLES.*.P4`.
-- Commit `feat(store): phase 4 contracts and schema v2`.
+- Add `ROTATION` (phases, crash points, grace 30 000 ms, chunk 16 KiB, max file 256 KiB, stage/ack labels, transfer TTL), new routes and rules; Phase 4 tables under `TABLES.*.P4`, added in place by `ensurePhase4` (P4-D12).
+- Commit `feat(store): phase 4 contracts and schema v2` (later revised to in-place tables, P4-D12).
 
 ### Task 4.5: Node anti-rollback and cutoff application (built first: 4.1 needs it)
 

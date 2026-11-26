@@ -1,6 +1,6 @@
 'use strict';
 const { initBase } = require('./schema-base.cjs');
-const { STORE_VERSIONS } = require('../core/contracts.cjs');
+const { SCHEMA_VERSION_ADAPTER } = require('../core/limits.cjs');
 const MESSAGING_DDL = `CREATE TABLE IF NOT EXISTS message_sessions(
   session_id TEXT PRIMARY KEY, peer_device TEXT NOT NULL, epoch INTEGER NOT NULL,
   status TEXT NOT NULL CHECK(status IN ('pending','active','closed')),
@@ -28,4 +28,4 @@ function ensureMessaging(db) {
   const index = db.prepare("SELECT 1 FROM sqlite_master WHERE type='index' AND name='message_replay_ids_by_seq'").get();
   if (!index) db.exec('CREATE INDEX IF NOT EXISTS message_replay_ids_by_seq ON message_replay_ids(session_id,direction,seq)');
 }
-module.exports = { VERSION: STORE_VERSIONS.device, init, DDL, MESSAGING_DDL, ensureMessaging };
+module.exports = { VERSION: SCHEMA_VERSION_ADAPTER, init, DDL, MESSAGING_DDL, ensureMessaging };

@@ -163,13 +163,13 @@ test('Phase 4 rotation contract: phases, crash points, 30 s grace, size caps', (
   assert.equal(c.ROUTES.cp.rotate, 'POST /v1/files/rotate');
 });
 
-test('Phase 4 backup contract and store versions', () => {
+test('Phase 4 backup contract; every store stays at schema version 1', () => {
   assert.equal(c.BACKUP.context, CONTEXTS.backup);
   assert.deepEqual([...c.BACKUP.files], ['manifest.json', 'manifest.sig', 'wrap.bin', 'payload.bin']);
   assert.deepEqual([...c.BACKUP.failures], ['bad_signature', 'unsupported_schema', 'digest_mismatch', 'stale_backup', 'decrypt_failed', 'incomplete_backup']);
-  assert.deepEqual({ ...c.STORE_VERSIONS }, { registry: 2, node: 2, device: 1 });
-  assert.equal(require('../../src/store/schema-cp.cjs').VERSION, 2);
-  assert.equal(require('../../src/store/schema-node.cjs').VERSION, 2);
+  // Phase 4 adds tables in place (ensurePhase4), like Phase 3 and Phase 6: no version bump.
+  assert.equal(require('../../src/store/schema-cp.cjs').VERSION, 1);
+  assert.equal(require('../../src/store/schema-node.cjs').VERSION, 1);
   assert.equal(require('../../src/store/schema-device.cjs').VERSION, 1);
   // The Round 1 adapter schema is frozen.
   assert.equal(require('../../src/store/schema-adapter.cjs').VERSION, 1);

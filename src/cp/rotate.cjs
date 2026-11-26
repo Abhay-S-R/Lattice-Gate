@@ -6,7 +6,7 @@
 //
 // Every phase is written to rotation_journal in its own transaction BEFORE the CP acts on it (§12.3);
 // REWRAP and COMMIT journal rows commit atomically with the state they describe. COMMIT is one
-// transaction: active version, old version → retiring, cutoff, signed snapshot E and the journal row
+// transaction: active version, old version → retired, cutoff, signed snapshot E and the journal row
 // (P4-D3). After COMMIT the rotation only ever rolls forward.
 //
 // Crash injection (§12.3, Task 4.3): KIG_CRASH_AT=<point> makes this process SIGKILL itself at that
@@ -20,6 +20,7 @@ const wrap = require('../core/wrap.cjs');
 const stageBytes = require('../core/stage.cjs');
 const { call } = require('../core/http.cjs');
 const { getMeta } = require('../store/schema-base.cjs');
+const { ensurePhase4 } = require('../store/schema-cp.cjs');
 const { ROTATION, NODE_IDS, HTTP, ROUTES, layout, kigHome, ports, url } = require('../core/contracts.cjs');
 const snapshots = require('./snapshot.cjs');
 const registry = require('./registry.cjs');
@@ -49,6 +50,7 @@ function journal(db, rot, phase, { epoch = null, reason = null } = {}) {
 }
 /** All rotations, each with its phases in journal order and the last phase reached. */
 function rotations(db) {
+  ensurePhase4(db);
   const byId = new Map();
   for (const r of db.prepare('SELECT * FROM rotation_journal ORDER BY rowid').all()) {
     let rot = byId.get(r.rotation_id);
@@ -81,16 +83,6 @@ const envelopeDevices = (db, fileId, version) => db.prepare('SELECT device_id FR
   .all(ids.enc(fileId), version).map((r) => ids.dec(r.device_id)).sort();
 const sameList = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
 
-/** Old versions past their CP-recorded grace become 'retired' (informational at the CP; nodes enforce on their own clocks). */
-function retireExpired(db) {
-  tx(db, () => {
-    const now = Date.now();
-    const up = db.prepare("UPDATE file_versions SET status='retired' WHERE file_id=? AND version=? AND status='retiring'");
-    for (const c of db.prepare('SELECT file_id, old_version, grace_ms, committed_ms FROM file_cutoffs').all()) {
-      if (now >= c.committed_ms + c.grace_ms) up.run(c.file_id, c.old_version);
-    }
-  });
-}
 
 // ---- phases ----
 function prepare(db, fileId) {
@@ -223,8 +215,9 @@ function commit(db, rot, graceMs, policyPriv) {
     if (!sameList(envelopeDevices(db, rot.file_id, rot.to_version), expectedDevices(db, rot.file_id))) throw new RotationError('device_set_changed');
     const acked = db.prepare('SELECT node_id FROM rotation_stage_acks WHERE rotation_id=?').all(rot.rotation_id).map((r) => r.node_id);
     if (!NODE_IDS.every((id) => acked.includes(id))) throw new RotationError('missing_stage_ack');
-    db.prepare("UPDATE file_versions SET status='retired' WHERE file_id=? AND status='retiring'").run(enc);
-    db.prepare("UPDATE file_versions SET status='retiring' WHERE file_id=? AND version=? AND status='active'").run(enc, rot.from_version);
+    // The old version is 'retired' at the CP from commit. Whether it is still inside its grace window
+    // follows from file_cutoffs; the window itself is enforced by each node on its own clock (D-06).
+    db.prepare("UPDATE file_versions SET status='retired' WHERE file_id=? AND version=? AND status='active'").run(enc, rot.from_version);
     db.prepare("UPDATE file_versions SET status='active' WHERE file_id=? AND version=?").run(enc, rot.to_version);
     db.prepare('UPDATE files SET active_version=? WHERE file_id=?').run(rot.to_version, enc);
     const epoch = Number(getMeta(db, 'epoch')) + 1;
@@ -277,7 +270,7 @@ async function finish(db, rot, epoch, env, { timeoutMs = ROTATION.distributeTime
 async function rotate(db, fileId, { env = process.env, graceMs = ROTATION.graceMs } = {}) {
   if (!ids.isId(fileId)) throw new RotationError('file_unknown');
   if (!Number.isSafeInteger(graceMs) || graceMs < 1 || graceMs > ROTATION.maxGraceMs) throw new RotationError('invalid_grace');
-  retireExpired(db);
+  ensurePhase4(db);
   const rot = prepare(db, fileId);
   crashPoint(env, 'after_prepare');
   try { rewrap(db, rot, env); } catch (e) {
@@ -309,4 +302,4 @@ async function rotate(db, fileId, { env = process.env, graceMs = ROTATION.graceM
   return finish(db, rot, epoch, env);
 }
 
-module.exports = { rotate, abort, finish, pending, rotations, retireExpired, crashPoint, RotationError };
+module.exports = { rotate, abort, finish, pending, rotations, crashPoint, RotationError };

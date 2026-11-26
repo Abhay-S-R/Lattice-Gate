@@ -17,6 +17,7 @@ const provider = require('../crypto/provider.cjs');
 const { ROTATION, RULES } = require('../core/contracts.cjs');
 const auth = require('./auth.cjs');
 const policy = require('./policy.cjs');
+const { ensurePhase4 } = require('../store/schema-node.cjs');
 
 const B64 = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
 const isB64 = (v) => typeof v === 'string' && B64.test(v);
@@ -89,6 +90,7 @@ function drop(db, body, { nodeId, nodeKey, cpPub, partitioned }) {
 
 /** POST /v1/transfer/start — body is a signed device request (§8.2) with op 'file.transfer'. */
 function start(db, req) {
+  ensurePhase4(db);
   const result = auth.authenticate(db, req);
   if (!result.ok) return { decision: 'deny', rule: result.rule };
   const snap = policy.current(db).snapshot;
@@ -125,6 +127,7 @@ function terminate(db, t, reason) {
 function chunk(db, body) {
   if (!body || typeof body !== 'object' || Array.isArray(body) || typeof body.transfer_id !== 'string' ||
       !/^[0-9a-f]{64}$/.test(body.transfer_id) || !Number.isSafeInteger(body.index) || body.index < 0) return null;
+  ensurePhase4(db);
   const t = db.prepare('SELECT * FROM transfers WHERE transfer_id=?').get(body.transfer_id);
   if (!t) return { decision: 'deny', rule: RULES.transferUnknown };
   if (t.state !== 'open') return { decision: 'deny', rule: RULES.transferTerminated, reason: t.reason };
@@ -159,6 +162,7 @@ function chunk(db, body) {
 
 /** Delete ciphertext and envelopes of versions whose grace has ended on this node; end their transfers. */
 function purgeRetired(db) {
+  ensurePhase4(db);
   const now = mono();
   const snap = policy.current(db).snapshot;
   for (const c of db.prepare('SELECT file_id, old_version, grace_ms, applied_mono_ns FROM cutoffs').all()) {

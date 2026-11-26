@@ -17,6 +17,7 @@ const { encode } = require('../core/encoding.cjs');
 const ids = require('../core/ids.cjs');
 const provider = require('../crypto/provider.cjs');
 const lease = require('./lease.cjs');
+const { ensurePhase4 } = require('../store/schema-node.cjs');
 
 function toPublicKey(key) { return Buffer.isBuffer(key) || key instanceof Uint8Array ? provider.importPublic(key) : key; }
 function signedBytes(snapshot) {
@@ -95,6 +96,7 @@ function applySnapshot(db, signed, cpPub) {
   if (!valid) return { applied: false, reason: 'bad_signature' };
   if (!wellFormed(signed.snapshot)) return { applied: false, reason: 'invalid_snapshot' };
   const s = signed.snapshot;
+  ensurePhase4(db); // cutoffs and transfers, on stores created before Phase 4
   if (s.epoch <= appliedEpoch(db) || s.epoch < readHighWater(db).value) return { applied: false, reason: 'stale_epoch' };
   try {
     tx(db, () => {

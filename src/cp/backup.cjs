@@ -96,7 +96,7 @@ function createBackup(home, outDir) {
   try {
     const snapFile = path.join(tmp, 'registry.db');
     const live = openDb(L.cp.db, { create: false, version: schema.VERSION, init: schema.init });
-    try { live.exec(`VACUUM INTO '${snapFile.replace(/'/g, "''")}'`); } finally { live.close(); }
+    try { schema.ensurePhase4(live); live.exec(`VACUUM INTO '${snapFile.replace(/'/g, "''")}'`); } finally { live.close(); }
     const snap = openReadOnly(snapFile);
     let meta;
     try {

@@ -17,6 +17,7 @@ function start({ env = process.env } = {}) {
   if (!NODE_IDS.includes(id)) throw new TypeError('invalid KIG_NODE_ID');
   const L = layout(kigHome(env));
   const db = openDb(L.node(id).db, { create: false, version: schema.VERSION, init: schema.init });
+  schema.ensurePhase4(db);
   const privateKey = policyRoutes.ensureNodeKey(L.root, id);
   const cpPub = fs.readFileSync(L.anchor.cpPolicyPub);
   const route = new Map([

@@ -53,6 +53,7 @@ Checks per point: CP killed at the point with no answer; journal phase at the cr
 - Transfer IDs are 32-byte bearer tokens. They are bound to one device and version on one node, ended at revocation, grace expiry or 10 minutes.
 - Files are capped at 256 KiB, so a staged version fits one signed HTTP message.
 - Node anti-rollback protects against an old `node.db` being put back, not against an attacker controlling a node's whole directory. A rolled-back node does not receive versions staged after its copy; it fails closed for them.
-- The CP's version status (`retiring` → `retired`) uses the CP wall clock and is informational. Enforcement is on the nodes.
+- At the CP an old version is `retired` from commit; its grace window is enforced only by the nodes, on their own clocks.
+- Stores stay at schema version 1; Phase 4 tables are added in place (P4-D12), so homes created before Phase 4 keep working (`tests/unit/phase4-upgrade.test.cjs`).
 - The recovery private key sits in `KIG_HOME/operator/` for the demo; operationally it is kept offline. `kig backup` raises `min_backup_epoch` in the anchor, so after a newer backup an older one is refused even if the live CP is lost.
 - Results are from the local replica. No hosted CI run is recorded here.

@@ -13,6 +13,7 @@ const { recover } = require('./recover.cjs');
 function start({ env = process.env } = {}) {
   const L = layout(kigHome(env));
   const db = openDb(L.cp.db, { create: false, version: schema.VERSION, init: schema.init });
+  schema.ensurePhase4(db);
   if (!snapshots.latest(db)) snapshots.publish(db);
   // §12.3: rotations left unfinished by a previous CP process (a crash). Captured before serving, so a
   // rotation started through this process is never mistaken for a crashed one.

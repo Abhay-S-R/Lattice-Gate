@@ -48,7 +48,7 @@ function fixture(t) {
   const makeBackup = (name) => {
     const dir = path.join(work, name);
     const r = ok(['backup', '--out', dir]);
-    assert.match(r.stdout, /^BACKUP .+ id=[0-9a-f]{32} epoch=\d+ log_seq=\d+ schema=2\n$/);
+    assert.match(r.stdout, /^BACKUP .+ id=[0-9a-f]{32} epoch=\d+ log_seq=\d+ schema=1\n$/);
     return dir;
   };
   const copy = (dir, name) => { const to = path.join(work, name); fs.cpSync(dir, to, { recursive: true }); return to; };
@@ -70,7 +70,7 @@ test('backup layout, manifest fields, signature and encryption', (t) => {
   assert.deepEqual(fs.readdirSync(dir).sort(), [...BACKUP.files].sort());
   const m = JSON.parse(fs.readFileSync(path.join(dir, 'manifest.json'), 'utf8'));
   assert.equal(m.format, BACKUP.format);
-  assert.equal(m.schema_version, 2);
+  assert.equal(m.schema_version, 1);
   assert.equal(m.revocation_epoch, f.epoch());
   assert.deepEqual(m.key_versions, [{ file_id: 'brief', active_version: 1 }]);
   assert.ok(m.log_seq > 0);

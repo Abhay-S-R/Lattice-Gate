@@ -131,7 +131,7 @@ test('rotation: in-flight transfer finishes in grace, old version refused on eve
   assert.equal(ended.rule === 'grace_expired' ? 'grace_expired' : ended.reason, 'grace_expired', JSON.stringify(ended));
   assert.deepEqual(await chunk(ctx, 'A', inflight.transfer_id, 0), { decision: 'deny', rule: 'transfer_terminated', reason: 'grace_expired' });
 
-  // Nodes delete the retired ciphertext after grace; the CP keeps the custodian copy as 'retiring'.
+  // Nodes delete the retired ciphertext after grace; the CP keeps the old version (and its custodian copy) as 'retired'.
   for (const id of NODE_IDS) {
     await until(() => {
       const db = openReadOnly(layout(ctx.home).node(id).db);
@@ -139,7 +139,7 @@ test('rotation: in-flight transfer finishes in grace, old version refused on eve
     }, `node ${id} purges version 1`, 4000);
   }
   const versions = ctx.db().prepare('SELECT version, status FROM file_versions WHERE file_id=? ORDER BY version').all(ids.enc('brief')).map((r) => [r.version, r.status]);
-  assert.deepEqual(versions, [[1, 'retiring'], [2, 'active']]);
+  assert.deepEqual(versions, [[1, 'retired'], [2, 'active']]);
   const phases = ctx.db().prepare('SELECT phase FROM rotation_journal WHERE rotation_id=? ORDER BY rowid').all(result.rotation_id).map((r) => r.phase);
   assert.deepEqual(phases, ['PREPARE', 'REWRAP', 'STAGE', 'COMMIT', 'DISTRIBUTE', 'COMPLETE']);
 });

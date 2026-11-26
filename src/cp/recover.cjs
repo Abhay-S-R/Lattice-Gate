@@ -51,7 +51,6 @@ function verifyActiveVersions(db, env) {
  * @returns {Promise<{ action: 'none'|'abort'|'roll_forward', rotations: object[], verified: number, unreadable: string[] }>}
  */
 async function recover(db, { env = process.env, rotationIds = null, distributeTimeoutMs } = {}) {
-  rotation.retireExpired(db);
   const out = [];
   for (const rot of rotation.pending(db)) {
     if (rotationIds && !rotationIds.has(rot.rotation_id)) continue;

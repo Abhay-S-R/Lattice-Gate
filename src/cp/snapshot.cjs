@@ -4,6 +4,7 @@ const { tx } = require('../store/db.cjs');
 const { getMeta, setMeta } = require('../store/schema-base.cjs');
 const { layout, ports, url, NODE_IDS, SNAPSHOT } = require('../core/contracts.cjs');
 const ids = require('../core/ids.cjs');
+const { ensurePhase4 } = require('../store/schema-cp.cjs');
 const { encode } = require('../core/encoding.cjs');
 const provider = require('../crypto/provider.cjs');
 const registry = require('./registry.cjs');
@@ -17,6 +18,7 @@ const signatureBytes = (snapshot) => encode(SNAPSHOT.label, [
 ]);
 
 function buildSnapshot(cpDb) {
+  ensurePhase4(cpDb); // file_cutoffs, on stores created before Phase 4
   const epoch = Number(getMeta(cpDb, 'epoch')) + 1;
   if (!Number.isSafeInteger(epoch) || epoch < 1) throw new Error('invalid_policy_epoch');
   const devices = registry.listDevices(cpDb)

@@ -1,0 +1,36 @@
+kig bench detect (synthetic data; baseline documented+warmup, 10 edges, warm-up seed 1)
+HELD-OUT seeds 201,202,203,204,205: 6784 events (6516 benign, 268 attack), 105 incidents, 85 alerts
+  incident level : precision 1.000  recall 0.810  F1 0.895  (recall on detectable 1.000; 20 evasive incidents included)
+  event level    : precision 1.000  recall 0.813  F1 0.897
+  median time-to-alert 4810 ms (max 5000 ms; includes the reorder-buffer wait)
+  false alerts per 1,000 benign events: 0.00
+  missed: 0 detectable, 20 evasive
+    unapproved_escalation:no_approval                10/10
+    unapproved_escalation:other_subject_approval     5/5
+    unapproved_escalation:wrong_role_approval        5/5
+    expired_approval                                 10/10
+    chain_3_edges_denied                             20/20
+    one_edge_allowed_sensitive                       10/10
+    two_edge_allowed                                 10/10
+    deny_burst_2_targets                             15/15
+    low_and_slow_3_edges                             0/10
+    two_edge_denied                                  0/10
+  clock: 1333 skewed in range, 216 out of range, 914 delayed 1-4 s, 159 delayed > 5 s, 147 late, 228 reordered
+tuning   seeds 101,102,103: 4103 events (3942 benign, 161 attack), 63 incidents, 51 alerts
+  incident level : precision 1.000  recall 0.810  F1 0.895  (recall on detectable 1.000; 12 evasive incidents included)
+  event level    : precision 1.000  recall 0.814  F1 0.897
+  median time-to-alert 4854 ms (max 5000 ms; includes the reorder-buffer wait)
+  false alerts per 1,000 benign events: 0.00
+  missed: 0 detectable, 12 evasive
+    unapproved_escalation:no_approval                6/6
+    unapproved_escalation:other_subject_approval     3/3
+    unapproved_escalation:wrong_role_approval        3/3
+    expired_approval                                 6/6
+    chain_3_edges_denied                             12/12
+    one_edge_allowed_sensitive                       6/6
+    two_edge_allowed                                 6/6
+    deny_burst_2_targets                             9/9
+    low_and_slow_3_edges                             0/6
+    two_edge_denied                                  0/6
+  clock: 738 skewed in range, 212 out of range, 513 delayed 1-4 s, 92 delayed > 5 s, 87 late, 141 reordered
+report not saved (ENOENT): /app/evidence/detect-2026-11-26T16-48-54-951Z.json is not writable here (read-only filesystem?)

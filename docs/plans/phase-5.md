@@ -222,7 +222,7 @@ evidence/
 
 ## 5. Gate 5 Checklist
 
-All commands must pass locally **and** inside `npm run judge -- ...` (ARM64, read-only root, offline):
+All commands must pass locally **and** inside `npm run judge -- ...` (linux/amd64 x86-64, read-only root, offline):
 
 - [ ] `npm run judge -- node --disable-warning=ExperimentalWarning --test "tests/unit/detect/*.test.cjs"` → all PASS, exit 0
 - [ ] `npm run judge -- node --disable-warning=ExperimentalWarning --test tests/unit/crypto-boundary.test.cjs` → PASS (Phase 5 introduces zero `node:crypto` imports)
@@ -237,7 +237,7 @@ All commands must pass locally **and** inside `npm run judge -- ...` (ARM64, rea
   - Same alert set for `lmWindowMs` = `30000`, `60000`, `120000`
 - [ ] `kig bench detect --seeds 101,102,103 --holdout 201,202,203,204,205` prints precision, recall, F1, median TTA (including watermark wait), false alerts per 1,000 benign events, and missed-evasion breakdown for the **held-out** seeds, and saves `evidence/detect-<ts>.json` (or prints cleanly on read-only FS)
 - [ ] Label-isolation static test passes (no detector module reads or imports `labels`)
-- [ ] `evidence/phase5.md` written and reviewed; PR `phase-5-detector` → `main` green in ARM CI
+- [ ] `evidence/phase5.md` written and reviewed; PR `phase-5-detector` → `main` green in x86-64 CI
 
 ---
 
@@ -508,7 +508,7 @@ All commands must pass locally **and** inside `npm run judge -- ...` (ARM64, rea
 **Files:**
 - Create: `evidence/phase5.md` (and benchmark JSON artifact under `evidence/`)
 
-- [ ] **Step 1:** Run the full detector suite and crypto-boundary check inside the ARM64 judge replica:
+- [ ] **Step 1:** Run the full detector suite and crypto-boundary check inside the x86-64 (amd64) judge replica:
   ```powershell
   npm run judge -- node --disable-warning=ExperimentalWarning --test "tests/unit/detect/*.test.cjs" tests/unit/crypto-boundary.test.cjs
   ```
@@ -518,7 +518,7 @@ All commands must pass locally **and** inside `npm run judge -- ...` (ARM64, rea
   - Practice-set regression output (all 22 events, 2 alerts, window invariance 30–120 s)
   - Held-out benchmark table: precision, recall, F1 (incident-level and event-level separately), median TTA (including watermark wait), false alerts per 1,000 benign events, dataset size, and class distribution
   - Honest limitations: synthetic benchmark origin (not production traffic), evasive low-and-slow misses, ±5 s clock-offset range, watermark latency trade-off
-- [ ] **Step 4:** Run full `npm test` (and confirm ARM CI green on PR `phase-5-detector` → `main`).
+- [ ] **Step 4:** Run full `npm test` (and confirm x86-64 CI green on PR `phase-5-detector` → `main`).
 - [ ] **Step 5:** Commit `docs(evidence): phase 5 detector regression and benchmark evidence`.
 
 ---

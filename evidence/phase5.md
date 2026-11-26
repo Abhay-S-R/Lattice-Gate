@@ -1,6 +1,8 @@
 # Phase 5 evidence: detector regression and benchmark (Gate 5)
 
-Code under test: commit `7223592` (branch `phase-5-detector`). Every command below ran inside the judging-container replica (`node scripts/judge.cjs …`): linux/arm64 (emulated on an x86-64 host), Node.js v24.11.1, read-only root, no network, toolkit at `/toolkit`. Emulated ARM is correct but slow, so no timing in this file is a performance claim, except the time-to-alert figures, which come from the simulated collector clock and do not depend on host speed.
+Code under test: commit `36d68b6` (branch `phase-5-detector`, merged with `main` after the platform correction). Every command below ran inside the judging-container replica (`node scripts/judge.cjs …`): linux/amd64 (x86-64, native on an x86-64 host), Node.js v24.11.1, read-only root, no network, toolkit at `/toolkit`. The time-to-alert figures come from the simulated collector clock and do not depend on host speed; no other timing in this file is a performance claim.
+
+> **Platform correction (2026-11-26).** The judging container is x86-64, not ARM64 (see `evidence/round1.md`). This evidence was first captured at commit `7223592` in an emulated linux/arm64 replica and has been re-run on x86-64. All results are identical: same test counts, byte-identical practice output, and the same benchmark metrics. Only the measured per-event processing time differs, by under 1 ms, because the first run was emulated. The ARM64 captures are kept as `superseded-arm64-*` files (§5).
 
 Specs: features P1-09, P1-10, P1-11, P1-18, D-09; architecture §15; plan `docs/plans/phase-5.md`.
 
@@ -10,9 +12,9 @@ Specs: features P1-09, P1-10, P1-11, P1-18, D-09; architecture §15; plan `docs/
 node scripts/judge.cjs node --disable-warning=ExperimentalWarning --test "tests/unit/detect/*.test.cjs" tests/unit/crypto-boundary.test.cjs
 ```
 
-Result: **86 tests, 86 pass, 0 fail, 0 skipped** (arm64). This includes the label-isolation test: the detector's modules never mention ground truth, and its require graph never reaches `generator.cjs` or `bench.cjs`. It also includes the crypto-boundary test: Phase 5 adds no `node:crypto` import.
+Result: **86 tests, 86 pass, 0 fail, 0 skipped** (x86-64). This includes the label-isolation test: the detector's modules never mention ground truth, and its require graph never reaches `generator.cjs` or `bench.cjs`. It also includes the crypto-boundary test: Phase 5 adds no `node:crypto` import.
 
-Full `npm test` on Node 24.11.1 (native x86-64 container, toolkit mounted): 302 tests, 301 pass, 0 fail, 1 skipped. The skip is the `pqcrypto` interop test, which needs Python with `pqcrypto` (present in the judge image, absent in the plain Node image used for this run).
+Full `npm test` in the same x86-64 replica (`node scripts/judge.cjs npm test`, Python 3.12 with `pqcrypto==0.4.0` present): **347 tests, 347 pass, 0 fail, 0 skipped**, including the Phase 2 CLI tests merged from `main` and the `pqcrypto` interop test.
 
 ## 2. Practice-set regression (22 events)
 
@@ -20,7 +22,7 @@ Full `npm test` on Node 24.11.1 (native x86-64 container, toolkit mounted): 302 
 node scripts/judge.cjs node kig.cjs detect --events /toolkit/practice/events.csv --approvals /toolkit/practice/approvals.json
 ```
 
-Full output: [`detect-practice-7223592.txt`](detect-practice-7223592.txt). 22 events, 0 rejected, **2 alerts**, 0 notices. Baseline: the 7 documented practice edges.
+Full output: [`detect-practice-36d68b6.txt`](detect-practice-36d68b6.txt). 22 events, 0 rejected, **2 alerts**, 0 notices. Baseline: the 7 documented practice edges.
 
 | Gate item | Result |
 |---|---|
@@ -43,7 +45,7 @@ Time-to-alert on the practice set: 4.8 s (PRIV-1) and 4.9 s (LM-1). Both are the
 node scripts/judge.cjs node kig.cjs bench detect --seeds 101,102,103 --holdout 201,202,203,204,205
 ```
 
-Full report: [`detect-7223592.json`](detect-7223592.json) (seeds, thresholds, baseline, per-seed results and metric definitions); console output: [`detect-bench-7223592.txt`](detect-bench-7223592.txt).
+Full report: [`detect-36d68b6.json`](detect-36d68b6.json) (seeds, thresholds, baseline, per-seed results and metric definitions); console output: [`detect-bench-36d68b6.txt`](detect-bench-36d68b6.txt).
 
 **Data origin: synthetic**, from the seeded generator `src/detect/generator.cjs` (mulberry32; simulation only). This is not production traffic. Baseline: the 7 documented edges plus 3 edges from a separate benign warm-up corpus (seed 1), 10 edges in total. Tuning, held-out and warm-up seeds are disjoint (enforced in code). No rule or threshold was changed after looking at the held-out seeds.
 
@@ -92,3 +94,12 @@ Tuning seeds 101–103 give the same picture: precision 1.000, recall 0.810, F1 
 - **Latency trade-off.** The 5 s reorder window buys correct ordering for delays up to 5 s at the cost of about 5 s of time-to-alert. Events delayed longer are still processed, marked `late`.
 - **Cold start per subject.** A subject's first observed role becomes its expected role. An identity whose very first event already shows an elevated role is not flagged by PRIV-1.
 - **Revocation context** covers approved `revoke_role` changes in the event stream. Device revocations and key cutoffs from Phases 3–4 are not yet fed in.
+
+## 5. Superseded: ARM64 captures (pre-correction, kept for the record)
+
+Commit `7223592`, emulated linux/arm64 replica. Same results as above. Superseded because the judging target is x86-64.
+
+- [`superseded-arm64-detect-7223592.json`](superseded-arm64-detect-7223592.json): benchmark report (`"arch": "arm64"`)
+- [`superseded-arm64-detect-bench-7223592.txt`](superseded-arm64-detect-bench-7223592.txt): benchmark console output
+- [`superseded-arm64-detect-practice-7223592.txt`](superseded-arm64-detect-practice-7223592.txt): practice-set output
+- Detector suite: 86 tests, 86 pass. Full `npm test` (plain x86-64 Node image without `pqcrypto`): 302 tests, 301 pass, 1 skipped (interop).

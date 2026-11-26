@@ -1,0 +1,1993 @@
+{
+  "generated_at": "2026-11-26T16:49:08.086Z",
+  "benchmark": "kig detect, synthetic labelled benchmark (P1-18)",
+  "data_origin": "synthetic: seeded generator (src/detect/generator.cjs), not production traffic",
+  "runtime": {
+    "node": "v24.11.1",
+    "platform": "linux",
+    "arch": "x64",
+    "cpus": 4
+  },
+  "seeds": {
+    "tuning": [
+      101,
+      102,
+      103
+    ],
+    "holdout": [
+      201,
+      202,
+      203,
+      204,
+      205
+    ],
+    "warmup": 1
+  },
+  "baseline": {
+    "source": "documented+warmup",
+    "edgeCount": 10,
+    "documentedEdgeCount": 7,
+    "corpusEdgeCount": 3,
+    "seed": 1
+  },
+  "config": {
+    "maxOffsetMs": 5000,
+    "latenessMs": 5000,
+    "uncertaintyMs": 250,
+    "lmWindowMs": 60000,
+    "lm1EdgeThreshold": 3,
+    "lm3DenyThreshold": 3,
+    "lm3TargetThreshold": 2,
+    "sensitiveServices": [
+      "identity",
+      "billing",
+      "archive"
+    ],
+    "revocationContextWindowMs": 300000,
+    "privLinkWindowMs": 1800000,
+    "roleRanks": [
+      [
+        "viewer",
+        1
+      ],
+      [
+        "service-reader",
+        2
+      ],
+      [
+        "report-reader",
+        3
+      ],
+      [
+        "operator",
+        4
+      ],
+      [
+        "admin",
+        5
+      ]
+    ]
+  },
+  "scenario_mix_per_seed": {
+    "routineSessions": 140,
+    "serviceRuns": 30,
+    "approvedAdmin": 4,
+    "approvedDecrease": 2,
+    "newHires": 4,
+    "isolatedDenials": 6,
+    "privUnapproved": 4,
+    "privExpired": 2,
+    "lmChain3": 4,
+    "lmAllowed": 4,
+    "lmDenyBurst": 3,
+    "evasiveLowSlow": 2,
+    "evasiveTwoEdge": 2
+  },
+  "definitions": {
+    "incident_match": "An alert matches a labelled incident when their event IDs intersect; one-to-one greedy matching by largest overlap.",
+    "precision": "matched alerts / all alerts (incident level).",
+    "recall": "matched incidents / all incidents, evasive ones included (incident level).",
+    "recall_detectable": "matched non-evasive incidents / non-evasive incidents.",
+    "f1": "harmonic mean of incident-level precision and recall.",
+    "false_alerts_per_1000_benign": "unmatched alerts / benign events x 1000.",
+    "tta_ms": "emission time minus receipt of the last evidence event the alert needed, on the simulated collector clock (includes the reorder-buffer wait, up to the lateness), plus measured processing time per event.",
+    "event_level": "event IDs covered by alerts vs event IDs belonging to incidents; reported separately, never mixed with incident metrics.",
+    "evasive": "attacks generated to stay under the rule thresholds (low-and-slow, two denied edges); misses are reported, not tuned away."
+  },
+  "tuning": {
+    "seeds": [
+      101,
+      102,
+      103
+    ],
+    "events": 4103,
+    "benign_events": 3942,
+    "malicious_events": 161,
+    "incidents": 63,
+    "alerts": 51,
+    "incident": {
+      "tp": 51,
+      "fp": 0,
+      "fn": 12,
+      "precision": 1,
+      "recall": 0.8095238095238095,
+      "f1": 0.8947368421052632,
+      "recall_detectable": 1,
+      "detectable_incidents": 51,
+      "evasive_incidents": 12
+    },
+    "event": {
+      "tp": 131,
+      "fp": 0,
+      "fn": 30,
+      "precision": 1,
+      "recall": 0.8136645962732919,
+      "f1": 0.8972602739726028
+    },
+    "false_alerts_per_1000_benign": 0,
+    "median_tta_ms": 4854.01207251053,
+    "max_tta_ms": 5000.023784331877,
+    "detection_by_variant": {
+      "unapproved_escalation:no_approval": {
+        "incidents": 6,
+        "detected": 6
+      },
+      "unapproved_escalation:other_subject_approval": {
+        "incidents": 3,
+        "detected": 3
+      },
+      "unapproved_escalation:wrong_role_approval": {
+        "incidents": 3,
+        "detected": 3
+      },
+      "expired_approval": {
+        "incidents": 6,
+        "detected": 6
+      },
+      "chain_3_edges_denied": {
+        "incidents": 12,
+        "detected": 12
+      },
+      "one_edge_allowed_sensitive": {
+        "incidents": 6,
+        "detected": 6
+      },
+      "two_edge_allowed": {
+        "incidents": 6,
+        "detected": 6
+      },
+      "deny_burst_2_targets": {
+        "incidents": 9,
+        "detected": 9
+      },
+      "low_and_slow_3_edges": {
+        "incidents": 6,
+        "detected": 0
+      },
+      "two_edge_denied": {
+        "incidents": 6,
+        "detected": 0
+      }
+    },
+    "missed_detectable": [],
+    "missed_evasive": [
+      {
+        "incident_id": "inc-101-18",
+        "variant": "low_and_slow_3_edges",
+        "evasive": true
+      },
+      {
+        "incident_id": "inc-101-19",
+        "variant": "low_and_slow_3_edges",
+        "evasive": true
+      },
+      {
+        "incident_id": "inc-101-20",
+        "variant": "two_edge_denied",
+        "evasive": true
+      },
+      {
+        "incident_id": "inc-101-21",
+        "variant": "two_edge_denied",
+        "evasive": true
+      },
+      {
+        "incident_id": "inc-102-18",
+        "variant": "low_and_slow_3_edges",
+        "evasive": true
+      },
+      {
+        "incident_id": "inc-102-19",
+        "variant": "low_and_slow_3_edges",
+        "evasive": true
+      },
+      {
+        "incident_id": "inc-102-20",
+        "variant": "two_edge_denied",
+        "evasive": true
+      },
+      {
+        "incident_id": "inc-102-21",
+        "variant": "two_edge_denied",
+        "evasive": true
+      },
+      {
+        "incident_id": "inc-103-18",
+        "variant": "low_and_slow_3_edges",
+        "evasive": true
+      },
+      {
+        "incident_id": "inc-103-19",
+        "variant": "low_and_slow_3_edges",
+        "evasive": true
+      },
+      {
+        "incident_id": "inc-103-20",
+        "variant": "two_edge_denied",
+        "evasive": true
+      },
+      {
+        "incident_id": "inc-103-21",
+        "variant": "two_edge_denied",
+        "evasive": true
+      }
+    ],
+    "false_alerts": [],
+    "clock": {
+      "skewed_within_range": 738,
+      "skew_out_of_range": 212,
+      "delayed_1_to_4_s": 513,
+      "delayed_over_5_s": 92,
+      "late_events": 87,
+      "reordered_events": 141
+    }
+  },
+  "holdout": {
+    "seeds": [
+      201,
+      202,
+      203,
+      204,
+      205
+    ],
+    "events": 6784,
+    "benign_events": 6516,
+    "malicious_events": 268,
+    "incidents": 105,
+    "alerts": 85,
+    "incident": {
+      "tp": 85,
+      "fp": 0,
+      "fn": 20,
+      "precision": 1,
+      "recall": 0.8095238095238095,
+      "f1": 0.8947368421052632,
+      "recall_detectable": 1,
+      "detectable_incidents": 85,
+      "evasive_incidents": 20
+    },
+    "event": {
+      "tp": 218,
+      "fp": 0,
+      "fn": 50,
+      "precision": 1,
+      "recall": 0.8134328358208955,
+      "f1": 0.897119341563786
+    },
+    "false_alerts_per_1000_benign": 0,
+    "median_tta_ms": 4810.012001834802,
+    "max_tta_ms": 5000.012001834802,
+    "detection_by_variant": {
+      "unapproved_escalation:no_approval": {
+        "incidents": 10,
+        "detected": 10
+      },
+      "unapproved_escalation:other_subject_approval": {
+        "incidents": 5,
+        "detected": 5
+      },
+      "unapproved_escalation:wrong_role_approval": {
+        "incidents": 5,
+        "detected": 5
+      },
+      "expired_approval": {
+        "incidents": 10,
+        "detected": 10
+      },
+      "chain_3_edges_denied": {
+        "incidents": 20,
+        "detected": 20
+      },
+      "one_edge_allowed_sensitive": {
+        "incidents": 10,
+        "detected": 10
+      },
+      "two_edge_allowed": {
+        "incidents": 10,
+        "detected": 10
+      },
+      "deny_burst_2_targets": {
+        "incidents": 15,
+        "detected": 15
+      },
+      "low_and_slow_3_edges": {
+        "incidents": 10,
+        "detected": 0
+      },
+      "two_edge_denied": {
+        "incidents": 10,
+        "detected": 0
+      }
+    },
+    "missed_detectable": [],
+    "missed_evasive": [
+      {
+        "incident_id": "inc-201-18",
+        "variant": "low_and_slow_3_edges",
+        "evasive": true
+      },
+      {
+        "incident_id": "inc-201-19",
+        "variant": "low_and_slow_3_edges",
+        "evasive": true
+      },
+      {
+        "incident_id": "inc-201-20",
+        "variant": "two_edge_denied",
+        "evasive": true
+      },
+      {
+        "incident_id": "inc-201-21",
+        "variant": "two_edge_denied",
+        "evasive": true
+      },
+      {
+        "incident_id": "inc-202-18",
+        "variant": "low_and_slow_3_edges",
+        "evasive": true
+      },
+      {
+        "incident_id": "inc-202-19",
+        "variant": "low_and_slow_3_edges",
+        "evasive": true
+      },
+      {
+        "incident_id": "inc-202-20",
+        "variant": "two_edge_denied",
+        "evasive": true
+      },
+      {
+        "incident_id": "inc-202-21",
+        "variant": "two_edge_denied",
+        "evasive": true
+      },
+      {
+        "incident_id": "inc-203-18",
+        "variant": "low_and_slow_3_edges",
+        "evasive": true
+      },
+      {
+        "incident_id": "inc-203-19",
+        "variant": "low_and_slow_3_edges",
+        "evasive": true
+      },
+      {
+        "incident_id": "inc-203-20",
+        "variant": "two_edge_denied",
+        "evasive": true
+      },
+      {
+        "incident_id": "inc-203-21",
+        "variant": "two_edge_denied",
+        "evasive": true
+      },
+      {
+        "incident_id": "inc-204-18",
+        "variant": "low_and_slow_3_edges",
+        "evasive": true
+      },
+      {
+        "incident_id": "inc-204-19",
+        "variant": "low_and_slow_3_edges",
+        "evasive": true
+      },
+      {
+        "incident_id": "inc-204-20",
+        "variant": "two_edge_denied",
+        "evasive": true
+      },
+      {
+        "incident_id": "inc-204-21",
+        "variant": "two_edge_denied",
+        "evasive": true
+      },
+      {
+        "incident_id": "inc-205-18",
+        "variant": "low_and_slow_3_edges",
+        "evasive": true
+      },
+      {
+        "incident_id": "inc-205-19",
+        "variant": "low_and_slow_3_edges",
+        "evasive": true
+      },
+      {
+        "incident_id": "inc-205-20",
+        "variant": "two_edge_denied",
+        "evasive": true
+      },
+      {
+        "incident_id": "inc-205-21",
+        "variant": "two_edge_denied",
+        "evasive": true
+      }
+    ],
+    "false_alerts": [],
+    "clock": {
+      "skewed_within_range": 1333,
+      "skew_out_of_range": 216,
+      "delayed_1_to_4_s": 914,
+      "delayed_over_5_s": 159,
+      "late_events": 147,
+      "reordered_events": 228
+    }
+  },
+  "per_seed": {
+    "tuning": [
+      {
+        "seed": 101,
+        "dataset": {
+          "seed": 101,
+          "events": 1374,
+          "benign_events": 1321,
+          "malicious_events": 53,
+          "incidents": 21,
+          "evasive_incidents": 4,
+          "incidents_by_variant": {
+            "unapproved_escalation:no_approval": 2,
+            "unapproved_escalation:other_subject_approval": 1,
+            "unapproved_escalation:wrong_role_approval": 1,
+            "expired_approval": 2,
+            "chain_3_edges_denied": 4,
+            "one_edge_allowed_sensitive": 2,
+            "two_edge_allowed": 2,
+            "deny_burst_2_targets": 3,
+            "low_and_slow_3_edges": 2,
+            "two_edge_denied": 2
+          },
+          "approvals": 13,
+          "clock": {
+            "skewed_within_range": 324,
+            "skew_out_of_range": 95,
+            "delayed_1_to_4_s": 176,
+            "delayed_over_5_s": 32
+          }
+        },
+        "detector": {
+          "alerts_by_rule": {
+            "LM-1": 4,
+            "LM-2": 4,
+            "PRIV-1": 6,
+            "LM-3": 3
+          },
+          "late": 30,
+          "reordered": 46,
+          "clock_unsupported": 95,
+          "processing_ms_per_event": 0.02378433187772926
+        },
+        "score": {
+          "incident": {
+            "tp": 17,
+            "fp": 0,
+            "fn": 4,
+            "precision": 1,
+            "recall": 0.8095238095238095,
+            "f1": 0.8947368421052632,
+            "recall_detectable": 1,
+            "detectable_incidents": 17,
+            "evasive_incidents": 4
+          },
+          "event": {
+            "tp": 43,
+            "fp": 0,
+            "fn": 10,
+            "precision": 1,
+            "recall": 0.8113207547169812,
+            "f1": 0.8958333333333334
+          },
+          "benign_events": 1321,
+          "false_alerts_per_1000_benign": 0,
+          "median_tta_ms": 4859.023784331877,
+          "missed_detectable": [],
+          "missed_evasive": [
+            {
+              "incident_id": "inc-101-18",
+              "variant": "low_and_slow_3_edges",
+              "evasive": true
+            },
+            {
+              "incident_id": "inc-101-19",
+              "variant": "low_and_slow_3_edges",
+              "evasive": true
+            },
+            {
+              "incident_id": "inc-101-20",
+              "variant": "two_edge_denied",
+              "evasive": true
+            },
+            {
+              "incident_id": "inc-101-21",
+              "variant": "two_edge_denied",
+              "evasive": true
+            }
+          ],
+          "false_alerts": [],
+          "matched": [
+            {
+              "alert_id": "alert-005",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-101-2",
+              "variant": "unapproved_escalation:other_subject_approval"
+            },
+            {
+              "alert_id": "alert-001",
+              "rule_id": "LM-1",
+              "incident_id": "inc-101-7",
+              "variant": "chain_3_edges_denied"
+            },
+            {
+              "alert_id": "alert-004",
+              "rule_id": "LM-3",
+              "incident_id": "inc-101-16",
+              "variant": "deny_burst_2_targets"
+            },
+            {
+              "alert_id": "alert-007",
+              "rule_id": "LM-1",
+              "incident_id": "inc-101-9",
+              "variant": "chain_3_edges_denied"
+            },
+            {
+              "alert_id": "alert-008",
+              "rule_id": "LM-3",
+              "incident_id": "inc-101-15",
+              "variant": "deny_burst_2_targets"
+            },
+            {
+              "alert_id": "alert-010",
+              "rule_id": "LM-1",
+              "incident_id": "inc-101-8",
+              "variant": "chain_3_edges_denied"
+            },
+            {
+              "alert_id": "alert-012",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-101-4",
+              "variant": "unapproved_escalation:no_approval"
+            },
+            {
+              "alert_id": "alert-013",
+              "rule_id": "LM-1",
+              "incident_id": "inc-101-10",
+              "variant": "chain_3_edges_denied"
+            },
+            {
+              "alert_id": "alert-015",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-101-3",
+              "variant": "unapproved_escalation:wrong_role_approval"
+            },
+            {
+              "alert_id": "alert-017",
+              "rule_id": "LM-3",
+              "incident_id": "inc-101-17",
+              "variant": "deny_burst_2_targets"
+            },
+            {
+              "alert_id": "alert-003",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-101-1",
+              "variant": "unapproved_escalation:no_approval"
+            },
+            {
+              "alert_id": "alert-006",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-101-6",
+              "variant": "expired_approval"
+            },
+            {
+              "alert_id": "alert-011",
+              "rule_id": "LM-2",
+              "incident_id": "inc-101-14",
+              "variant": "two_edge_allowed"
+            },
+            {
+              "alert_id": "alert-014",
+              "rule_id": "LM-2",
+              "incident_id": "inc-101-12",
+              "variant": "two_edge_allowed"
+            },
+            {
+              "alert_id": "alert-016",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-101-5",
+              "variant": "expired_approval"
+            },
+            {
+              "alert_id": "alert-002",
+              "rule_id": "LM-2",
+              "incident_id": "inc-101-13",
+              "variant": "one_edge_allowed_sensitive"
+            },
+            {
+              "alert_id": "alert-009",
+              "rule_id": "LM-2",
+              "incident_id": "inc-101-11",
+              "variant": "one_edge_allowed_sensitive"
+            }
+          ]
+        }
+      },
+      {
+        "seed": 102,
+        "dataset": {
+          "seed": 102,
+          "events": 1377,
+          "benign_events": 1321,
+          "malicious_events": 56,
+          "incidents": 21,
+          "evasive_incidents": 4,
+          "incidents_by_variant": {
+            "unapproved_escalation:no_approval": 2,
+            "unapproved_escalation:other_subject_approval": 1,
+            "unapproved_escalation:wrong_role_approval": 1,
+            "expired_approval": 2,
+            "chain_3_edges_denied": 4,
+            "one_edge_allowed_sensitive": 2,
+            "two_edge_allowed": 2,
+            "deny_burst_2_targets": 3,
+            "low_and_slow_3_edges": 2,
+            "two_edge_denied": 2
+          },
+          "approvals": 13,
+          "clock": {
+            "skewed_within_range": 275,
+            "skew_out_of_range": 25,
+            "delayed_1_to_4_s": 188,
+            "delayed_over_5_s": 25
+          }
+        },
+        "detector": {
+          "alerts_by_rule": {
+            "LM-3": 3,
+            "LM-2": 4,
+            "PRIV-1": 6,
+            "LM-1": 4
+          },
+          "late": 25,
+          "reordered": 59,
+          "clock_unsupported": 25,
+          "processing_ms_per_event": 0.01207251053013798
+        },
+        "score": {
+          "incident": {
+            "tp": 17,
+            "fp": 0,
+            "fn": 4,
+            "precision": 1,
+            "recall": 0.8095238095238095,
+            "f1": 0.8947368421052632,
+            "recall_detectable": 1,
+            "detectable_incidents": 17,
+            "evasive_incidents": 4
+          },
+          "event": {
+            "tp": 46,
+            "fp": 0,
+            "fn": 10,
+            "precision": 1,
+            "recall": 0.8214285714285714,
+            "f1": 0.9019607843137255
+          },
+          "benign_events": 1321,
+          "false_alerts_per_1000_benign": 0,
+          "median_tta_ms": 4743.01207251053,
+          "missed_detectable": [],
+          "missed_evasive": [
+            {
+              "incident_id": "inc-102-18",
+              "variant": "low_and_slow_3_edges",
+              "evasive": true
+            },
+            {
+              "incident_id": "inc-102-19",
+              "variant": "low_and_slow_3_edges",
+              "evasive": true
+            },
+            {
+              "incident_id": "inc-102-20",
+              "variant": "two_edge_denied",
+              "evasive": true
+            },
+            {
+              "incident_id": "inc-102-21",
+              "variant": "two_edge_denied",
+              "evasive": true
+            }
+          ],
+          "false_alerts": [],
+          "matched": [
+            {
+              "alert_id": "alert-004",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-102-3",
+              "variant": "unapproved_escalation:wrong_role_approval"
+            },
+            {
+              "alert_id": "alert-009",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-102-1",
+              "variant": "unapproved_escalation:no_approval"
+            },
+            {
+              "alert_id": "alert-012",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-102-2",
+              "variant": "unapproved_escalation:other_subject_approval"
+            },
+            {
+              "alert_id": "alert-001",
+              "rule_id": "LM-3",
+              "incident_id": "inc-102-17",
+              "variant": "deny_burst_2_targets"
+            },
+            {
+              "alert_id": "alert-002",
+              "rule_id": "LM-3",
+              "incident_id": "inc-102-15",
+              "variant": "deny_burst_2_targets"
+            },
+            {
+              "alert_id": "alert-007",
+              "rule_id": "LM-1",
+              "incident_id": "inc-102-10",
+              "variant": "chain_3_edges_denied"
+            },
+            {
+              "alert_id": "alert-008",
+              "rule_id": "LM-3",
+              "incident_id": "inc-102-16",
+              "variant": "deny_burst_2_targets"
+            },
+            {
+              "alert_id": "alert-010",
+              "rule_id": "LM-1",
+              "incident_id": "inc-102-8",
+              "variant": "chain_3_edges_denied"
+            },
+            {
+              "alert_id": "alert-011",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-102-4",
+              "variant": "unapproved_escalation:no_approval"
+            },
+            {
+              "alert_id": "alert-014",
+              "rule_id": "LM-1",
+              "incident_id": "inc-102-7",
+              "variant": "chain_3_edges_denied"
+            },
+            {
+              "alert_id": "alert-015",
+              "rule_id": "LM-1",
+              "incident_id": "inc-102-9",
+              "variant": "chain_3_edges_denied"
+            },
+            {
+              "alert_id": "alert-003",
+              "rule_id": "LM-2",
+              "incident_id": "inc-102-12",
+              "variant": "two_edge_allowed"
+            },
+            {
+              "alert_id": "alert-006",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-102-6",
+              "variant": "expired_approval"
+            },
+            {
+              "alert_id": "alert-013",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-102-5",
+              "variant": "expired_approval"
+            },
+            {
+              "alert_id": "alert-016",
+              "rule_id": "LM-2",
+              "incident_id": "inc-102-14",
+              "variant": "two_edge_allowed"
+            },
+            {
+              "alert_id": "alert-005",
+              "rule_id": "LM-2",
+              "incident_id": "inc-102-11",
+              "variant": "one_edge_allowed_sensitive"
+            },
+            {
+              "alert_id": "alert-017",
+              "rule_id": "LM-2",
+              "incident_id": "inc-102-13",
+              "variant": "one_edge_allowed_sensitive"
+            }
+          ]
+        }
+      },
+      {
+        "seed": 103,
+        "dataset": {
+          "seed": 103,
+          "events": 1352,
+          "benign_events": 1300,
+          "malicious_events": 52,
+          "incidents": 21,
+          "evasive_incidents": 4,
+          "incidents_by_variant": {
+            "unapproved_escalation:no_approval": 2,
+            "unapproved_escalation:other_subject_approval": 1,
+            "unapproved_escalation:wrong_role_approval": 1,
+            "expired_approval": 2,
+            "chain_3_edges_denied": 4,
+            "one_edge_allowed_sensitive": 2,
+            "two_edge_allowed": 2,
+            "deny_burst_2_targets": 3,
+            "low_and_slow_3_edges": 2,
+            "two_edge_denied": 2
+          },
+          "approvals": 13,
+          "clock": {
+            "skewed_within_range": 139,
+            "skew_out_of_range": 92,
+            "delayed_1_to_4_s": 149,
+            "delayed_over_5_s": 35
+          }
+        },
+        "detector": {
+          "alerts_by_rule": {
+            "LM-1": 4,
+            "LM-2": 4,
+            "PRIV-1": 6,
+            "LM-3": 3
+          },
+          "late": 32,
+          "reordered": 36,
+          "clock_unsupported": 92,
+          "processing_ms_per_event": 0.012860917899408283
+        },
+        "score": {
+          "incident": {
+            "tp": 17,
+            "fp": 0,
+            "fn": 4,
+            "precision": 1,
+            "recall": 0.8095238095238095,
+            "f1": 0.8947368421052632,
+            "recall_detectable": 1,
+            "detectable_incidents": 17,
+            "evasive_incidents": 4
+          },
+          "event": {
+            "tp": 42,
+            "fp": 0,
+            "fn": 10,
+            "precision": 1,
+            "recall": 0.8076923076923077,
+            "f1": 0.8936170212765957
+          },
+          "benign_events": 1300,
+          "false_alerts_per_1000_benign": 0,
+          "median_tta_ms": 4865.012860917899,
+          "missed_detectable": [],
+          "missed_evasive": [
+            {
+              "incident_id": "inc-103-18",
+              "variant": "low_and_slow_3_edges",
+              "evasive": true
+            },
+            {
+              "incident_id": "inc-103-19",
+              "variant": "low_and_slow_3_edges",
+              "evasive": true
+            },
+            {
+              "incident_id": "inc-103-20",
+              "variant": "two_edge_denied",
+              "evasive": true
+            },
+            {
+              "incident_id": "inc-103-21",
+              "variant": "two_edge_denied",
+              "evasive": true
+            }
+          ],
+          "false_alerts": [],
+          "matched": [
+            {
+              "alert_id": "alert-009",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-103-4",
+              "variant": "unapproved_escalation:no_approval"
+            },
+            {
+              "alert_id": "alert-001",
+              "rule_id": "LM-1",
+              "incident_id": "inc-103-10",
+              "variant": "chain_3_edges_denied"
+            },
+            {
+              "alert_id": "alert-005",
+              "rule_id": "LM-1",
+              "incident_id": "inc-103-9",
+              "variant": "chain_3_edges_denied"
+            },
+            {
+              "alert_id": "alert-006",
+              "rule_id": "LM-3",
+              "incident_id": "inc-103-16",
+              "variant": "deny_burst_2_targets"
+            },
+            {
+              "alert_id": "alert-007",
+              "rule_id": "LM-1",
+              "incident_id": "inc-103-7",
+              "variant": "chain_3_edges_denied"
+            },
+            {
+              "alert_id": "alert-010",
+              "rule_id": "LM-3",
+              "incident_id": "inc-103-17",
+              "variant": "deny_burst_2_targets"
+            },
+            {
+              "alert_id": "alert-014",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-103-2",
+              "variant": "unapproved_escalation:other_subject_approval"
+            },
+            {
+              "alert_id": "alert-016",
+              "rule_id": "LM-1",
+              "incident_id": "inc-103-8",
+              "variant": "chain_3_edges_denied"
+            },
+            {
+              "alert_id": "alert-017",
+              "rule_id": "LM-3",
+              "incident_id": "inc-103-15",
+              "variant": "deny_burst_2_targets"
+            },
+            {
+              "alert_id": "alert-002",
+              "rule_id": "LM-2",
+              "incident_id": "inc-103-12",
+              "variant": "two_edge_allowed"
+            },
+            {
+              "alert_id": "alert-003",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-103-1",
+              "variant": "unapproved_escalation:no_approval"
+            },
+            {
+              "alert_id": "alert-008",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-103-3",
+              "variant": "unapproved_escalation:wrong_role_approval"
+            },
+            {
+              "alert_id": "alert-011",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-103-5",
+              "variant": "expired_approval"
+            },
+            {
+              "alert_id": "alert-012",
+              "rule_id": "LM-2",
+              "incident_id": "inc-103-14",
+              "variant": "two_edge_allowed"
+            },
+            {
+              "alert_id": "alert-013",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-103-6",
+              "variant": "expired_approval"
+            },
+            {
+              "alert_id": "alert-004",
+              "rule_id": "LM-2",
+              "incident_id": "inc-103-13",
+              "variant": "one_edge_allowed_sensitive"
+            },
+            {
+              "alert_id": "alert-015",
+              "rule_id": "LM-2",
+              "incident_id": "inc-103-11",
+              "variant": "one_edge_allowed_sensitive"
+            }
+          ]
+        }
+      }
+    ],
+    "holdout": [
+      {
+        "seed": 201,
+        "dataset": {
+          "seed": 201,
+          "events": 1367,
+          "benign_events": 1313,
+          "malicious_events": 54,
+          "incidents": 21,
+          "evasive_incidents": 4,
+          "incidents_by_variant": {
+            "unapproved_escalation:no_approval": 2,
+            "unapproved_escalation:other_subject_approval": 1,
+            "unapproved_escalation:wrong_role_approval": 1,
+            "expired_approval": 2,
+            "chain_3_edges_denied": 4,
+            "one_edge_allowed_sensitive": 2,
+            "two_edge_allowed": 2,
+            "deny_burst_2_targets": 3,
+            "low_and_slow_3_edges": 2,
+            "two_edge_denied": 2
+          },
+          "approvals": 13,
+          "clock": {
+            "skewed_within_range": 180,
+            "skew_out_of_range": 38,
+            "delayed_1_to_4_s": 172,
+            "delayed_over_5_s": 30
+          }
+        },
+        "detector": {
+          "alerts_by_rule": {
+            "LM-3": 3,
+            "LM-1": 4,
+            "PRIV-1": 6,
+            "LM-2": 4
+          },
+          "late": 26,
+          "reordered": 44,
+          "clock_unsupported": 38,
+          "processing_ms_per_event": 0.01088881272860278
+        },
+        "score": {
+          "incident": {
+            "tp": 17,
+            "fp": 0,
+            "fn": 4,
+            "precision": 1,
+            "recall": 0.8095238095238095,
+            "f1": 0.8947368421052632,
+            "recall_detectable": 1,
+            "detectable_incidents": 17,
+            "evasive_incidents": 4
+          },
+          "event": {
+            "tp": 44,
+            "fp": 0,
+            "fn": 10,
+            "precision": 1,
+            "recall": 0.8148148148148148,
+            "f1": 0.8979591836734693
+          },
+          "benign_events": 1313,
+          "false_alerts_per_1000_benign": 0,
+          "median_tta_ms": 4821.010888812729,
+          "missed_detectable": [],
+          "missed_evasive": [
+            {
+              "incident_id": "inc-201-18",
+              "variant": "low_and_slow_3_edges",
+              "evasive": true
+            },
+            {
+              "incident_id": "inc-201-19",
+              "variant": "low_and_slow_3_edges",
+              "evasive": true
+            },
+            {
+              "incident_id": "inc-201-20",
+              "variant": "two_edge_denied",
+              "evasive": true
+            },
+            {
+              "incident_id": "inc-201-21",
+              "variant": "two_edge_denied",
+              "evasive": true
+            }
+          ],
+          "false_alerts": [],
+          "matched": [
+            {
+              "alert_id": "alert-006",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-201-2",
+              "variant": "unapproved_escalation:other_subject_approval"
+            },
+            {
+              "alert_id": "alert-013",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-201-3",
+              "variant": "unapproved_escalation:wrong_role_approval"
+            },
+            {
+              "alert_id": "alert-001",
+              "rule_id": "LM-3",
+              "incident_id": "inc-201-16",
+              "variant": "deny_burst_2_targets"
+            },
+            {
+              "alert_id": "alert-002",
+              "rule_id": "LM-1",
+              "incident_id": "inc-201-7",
+              "variant": "chain_3_edges_denied"
+            },
+            {
+              "alert_id": "alert-003",
+              "rule_id": "LM-1",
+              "incident_id": "inc-201-8",
+              "variant": "chain_3_edges_denied"
+            },
+            {
+              "alert_id": "alert-004",
+              "rule_id": "LM-3",
+              "incident_id": "inc-201-15",
+              "variant": "deny_burst_2_targets"
+            },
+            {
+              "alert_id": "alert-010",
+              "rule_id": "LM-3",
+              "incident_id": "inc-201-17",
+              "variant": "deny_burst_2_targets"
+            },
+            {
+              "alert_id": "alert-014",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-201-1",
+              "variant": "unapproved_escalation:no_approval"
+            },
+            {
+              "alert_id": "alert-015",
+              "rule_id": "LM-1",
+              "incident_id": "inc-201-9",
+              "variant": "chain_3_edges_denied"
+            },
+            {
+              "alert_id": "alert-016",
+              "rule_id": "LM-1",
+              "incident_id": "inc-201-10",
+              "variant": "chain_3_edges_denied"
+            },
+            {
+              "alert_id": "alert-005",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-201-6",
+              "variant": "expired_approval"
+            },
+            {
+              "alert_id": "alert-007",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-201-4",
+              "variant": "unapproved_escalation:no_approval"
+            },
+            {
+              "alert_id": "alert-009",
+              "rule_id": "LM-2",
+              "incident_id": "inc-201-14",
+              "variant": "two_edge_allowed"
+            },
+            {
+              "alert_id": "alert-012",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-201-5",
+              "variant": "expired_approval"
+            },
+            {
+              "alert_id": "alert-017",
+              "rule_id": "LM-2",
+              "incident_id": "inc-201-12",
+              "variant": "two_edge_allowed"
+            },
+            {
+              "alert_id": "alert-008",
+              "rule_id": "LM-2",
+              "incident_id": "inc-201-11",
+              "variant": "one_edge_allowed_sensitive"
+            },
+            {
+              "alert_id": "alert-011",
+              "rule_id": "LM-2",
+              "incident_id": "inc-201-13",
+              "variant": "one_edge_allowed_sensitive"
+            }
+          ]
+        }
+      },
+      {
+        "seed": 202,
+        "dataset": {
+          "seed": 202,
+          "events": 1362,
+          "benign_events": 1308,
+          "malicious_events": 54,
+          "incidents": 21,
+          "evasive_incidents": 4,
+          "incidents_by_variant": {
+            "unapproved_escalation:no_approval": 2,
+            "unapproved_escalation:other_subject_approval": 1,
+            "unapproved_escalation:wrong_role_approval": 1,
+            "expired_approval": 2,
+            "chain_3_edges_denied": 4,
+            "one_edge_allowed_sensitive": 2,
+            "two_edge_allowed": 2,
+            "deny_burst_2_targets": 3,
+            "low_and_slow_3_edges": 2,
+            "two_edge_denied": 2
+          },
+          "approvals": 13,
+          "clock": {
+            "skewed_within_range": 406,
+            "skew_out_of_range": 109,
+            "delayed_1_to_4_s": 191,
+            "delayed_over_5_s": 28
+          }
+        },
+        "detector": {
+          "alerts_by_rule": {
+            "LM-2": 4,
+            "PRIV-1": 6,
+            "LM-3": 3,
+            "LM-1": 4
+          },
+          "late": 20,
+          "reordered": 41,
+          "clock_unsupported": 109,
+          "processing_ms_per_event": 0.012001834801762114
+        },
+        "score": {
+          "incident": {
+            "tp": 17,
+            "fp": 0,
+            "fn": 4,
+            "precision": 1,
+            "recall": 0.8095238095238095,
+            "f1": 0.8947368421052632,
+            "recall_detectable": 1,
+            "detectable_incidents": 17,
+            "evasive_incidents": 4
+          },
+          "event": {
+            "tp": 44,
+            "fp": 0,
+            "fn": 10,
+            "precision": 1,
+            "recall": 0.8148148148148148,
+            "f1": 0.8979591836734693
+          },
+          "benign_events": 1308,
+          "false_alerts_per_1000_benign": 0,
+          "median_tta_ms": 4745.012001834802,
+          "missed_detectable": [],
+          "missed_evasive": [
+            {
+              "incident_id": "inc-202-18",
+              "variant": "low_and_slow_3_edges",
+              "evasive": true
+            },
+            {
+              "incident_id": "inc-202-19",
+              "variant": "low_and_slow_3_edges",
+              "evasive": true
+            },
+            {
+              "incident_id": "inc-202-20",
+              "variant": "two_edge_denied",
+              "evasive": true
+            },
+            {
+              "incident_id": "inc-202-21",
+              "variant": "two_edge_denied",
+              "evasive": true
+            }
+          ],
+          "false_alerts": [],
+          "matched": [
+            {
+              "alert_id": "alert-006",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-202-4",
+              "variant": "unapproved_escalation:no_approval"
+            },
+            {
+              "alert_id": "alert-003",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-202-1",
+              "variant": "unapproved_escalation:no_approval"
+            },
+            {
+              "alert_id": "alert-005",
+              "rule_id": "LM-3",
+              "incident_id": "inc-202-17",
+              "variant": "deny_burst_2_targets"
+            },
+            {
+              "alert_id": "alert-007",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-202-2",
+              "variant": "unapproved_escalation:other_subject_approval"
+            },
+            {
+              "alert_id": "alert-008",
+              "rule_id": "LM-3",
+              "incident_id": "inc-202-15",
+              "variant": "deny_burst_2_targets"
+            },
+            {
+              "alert_id": "alert-009",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-202-3",
+              "variant": "unapproved_escalation:wrong_role_approval"
+            },
+            {
+              "alert_id": "alert-011",
+              "rule_id": "LM-1",
+              "incident_id": "inc-202-10",
+              "variant": "chain_3_edges_denied"
+            },
+            {
+              "alert_id": "alert-012",
+              "rule_id": "LM-1",
+              "incident_id": "inc-202-9",
+              "variant": "chain_3_edges_denied"
+            },
+            {
+              "alert_id": "alert-014",
+              "rule_id": "LM-3",
+              "incident_id": "inc-202-16",
+              "variant": "deny_burst_2_targets"
+            },
+            {
+              "alert_id": "alert-015",
+              "rule_id": "LM-1",
+              "incident_id": "inc-202-8",
+              "variant": "chain_3_edges_denied"
+            },
+            {
+              "alert_id": "alert-017",
+              "rule_id": "LM-1",
+              "incident_id": "inc-202-7",
+              "variant": "chain_3_edges_denied"
+            },
+            {
+              "alert_id": "alert-002",
+              "rule_id": "LM-2",
+              "incident_id": "inc-202-14",
+              "variant": "two_edge_allowed"
+            },
+            {
+              "alert_id": "alert-010",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-202-5",
+              "variant": "expired_approval"
+            },
+            {
+              "alert_id": "alert-013",
+              "rule_id": "LM-2",
+              "incident_id": "inc-202-12",
+              "variant": "two_edge_allowed"
+            },
+            {
+              "alert_id": "alert-016",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-202-6",
+              "variant": "expired_approval"
+            },
+            {
+              "alert_id": "alert-001",
+              "rule_id": "LM-2",
+              "incident_id": "inc-202-11",
+              "variant": "one_edge_allowed_sensitive"
+            },
+            {
+              "alert_id": "alert-004",
+              "rule_id": "LM-2",
+              "incident_id": "inc-202-13",
+              "variant": "one_edge_allowed_sensitive"
+            }
+          ]
+        }
+      },
+      {
+        "seed": 203,
+        "dataset": {
+          "seed": 203,
+          "events": 1347,
+          "benign_events": 1295,
+          "malicious_events": 52,
+          "incidents": 21,
+          "evasive_incidents": 4,
+          "incidents_by_variant": {
+            "unapproved_escalation:no_approval": 2,
+            "unapproved_escalation:other_subject_approval": 1,
+            "unapproved_escalation:wrong_role_approval": 1,
+            "expired_approval": 2,
+            "chain_3_edges_denied": 4,
+            "one_edge_allowed_sensitive": 2,
+            "two_edge_allowed": 2,
+            "deny_burst_2_targets": 3,
+            "low_and_slow_3_edges": 2,
+            "two_edge_denied": 2
+          },
+          "approvals": 13,
+          "clock": {
+            "skewed_within_range": 184,
+            "skew_out_of_range": 35,
+            "delayed_1_to_4_s": 181,
+            "delayed_over_5_s": 26
+          }
+        },
+        "detector": {
+          "alerts_by_rule": {
+            "LM-1": 4,
+            "LM-2": 4,
+            "LM-3": 3,
+            "PRIV-1": 6
+          },
+          "late": 26,
+          "reordered": 45,
+          "clock_unsupported": 35,
+          "processing_ms_per_event": 0.00827767112100965
+        },
+        "score": {
+          "incident": {
+            "tp": 17,
+            "fp": 0,
+            "fn": 4,
+            "precision": 1,
+            "recall": 0.8095238095238095,
+            "f1": 0.8947368421052632,
+            "recall_detectable": 1,
+            "detectable_incidents": 17,
+            "evasive_incidents": 4
+          },
+          "event": {
+            "tp": 42,
+            "fp": 0,
+            "fn": 10,
+            "precision": 1,
+            "recall": 0.8076923076923077,
+            "f1": 0.8936170212765957
+          },
+          "benign_events": 1295,
+          "false_alerts_per_1000_benign": 0,
+          "median_tta_ms": 4794.008277671121,
+          "missed_detectable": [],
+          "missed_evasive": [
+            {
+              "incident_id": "inc-203-18",
+              "variant": "low_and_slow_3_edges",
+              "evasive": true
+            },
+            {
+              "incident_id": "inc-203-19",
+              "variant": "low_and_slow_3_edges",
+              "evasive": true
+            },
+            {
+              "incident_id": "inc-203-20",
+              "variant": "two_edge_denied",
+              "evasive": true
+            },
+            {
+              "incident_id": "inc-203-21",
+              "variant": "two_edge_denied",
+              "evasive": true
+            }
+          ],
+          "false_alerts": [],
+          "matched": [
+            {
+              "alert_id": "alert-009",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-203-1",
+              "variant": "unapproved_escalation:no_approval"
+            },
+            {
+              "alert_id": "alert-001",
+              "rule_id": "LM-1",
+              "incident_id": "inc-203-10",
+              "variant": "chain_3_edges_denied"
+            },
+            {
+              "alert_id": "alert-002",
+              "rule_id": "LM-1",
+              "incident_id": "inc-203-7",
+              "variant": "chain_3_edges_denied"
+            },
+            {
+              "alert_id": "alert-004",
+              "rule_id": "LM-1",
+              "incident_id": "inc-203-9",
+              "variant": "chain_3_edges_denied"
+            },
+            {
+              "alert_id": "alert-005",
+              "rule_id": "LM-3",
+              "incident_id": "inc-203-15",
+              "variant": "deny_burst_2_targets"
+            },
+            {
+              "alert_id": "alert-008",
+              "rule_id": "LM-3",
+              "incident_id": "inc-203-17",
+              "variant": "deny_burst_2_targets"
+            },
+            {
+              "alert_id": "alert-010",
+              "rule_id": "LM-1",
+              "incident_id": "inc-203-8",
+              "variant": "chain_3_edges_denied"
+            },
+            {
+              "alert_id": "alert-013",
+              "rule_id": "LM-3",
+              "incident_id": "inc-203-16",
+              "variant": "deny_burst_2_targets"
+            },
+            {
+              "alert_id": "alert-017",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-203-2",
+              "variant": "unapproved_escalation:other_subject_approval"
+            },
+            {
+              "alert_id": "alert-003",
+              "rule_id": "LM-2",
+              "incident_id": "inc-203-12",
+              "variant": "two_edge_allowed"
+            },
+            {
+              "alert_id": "alert-006",
+              "rule_id": "LM-2",
+              "incident_id": "inc-203-14",
+              "variant": "two_edge_allowed"
+            },
+            {
+              "alert_id": "alert-007",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-203-5",
+              "variant": "expired_approval"
+            },
+            {
+              "alert_id": "alert-011",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-203-3",
+              "variant": "unapproved_escalation:wrong_role_approval"
+            },
+            {
+              "alert_id": "alert-012",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-203-4",
+              "variant": "unapproved_escalation:no_approval"
+            },
+            {
+              "alert_id": "alert-015",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-203-6",
+              "variant": "expired_approval"
+            },
+            {
+              "alert_id": "alert-014",
+              "rule_id": "LM-2",
+              "incident_id": "inc-203-13",
+              "variant": "one_edge_allowed_sensitive"
+            },
+            {
+              "alert_id": "alert-016",
+              "rule_id": "LM-2",
+              "incident_id": "inc-203-11",
+              "variant": "one_edge_allowed_sensitive"
+            }
+          ]
+        }
+      },
+      {
+        "seed": 204,
+        "dataset": {
+          "seed": 204,
+          "events": 1345,
+          "benign_events": 1291,
+          "malicious_events": 54,
+          "incidents": 21,
+          "evasive_incidents": 4,
+          "incidents_by_variant": {
+            "unapproved_escalation:no_approval": 2,
+            "unapproved_escalation:other_subject_approval": 1,
+            "unapproved_escalation:wrong_role_approval": 1,
+            "expired_approval": 2,
+            "chain_3_edges_denied": 4,
+            "one_edge_allowed_sensitive": 2,
+            "two_edge_allowed": 2,
+            "deny_burst_2_targets": 3,
+            "low_and_slow_3_edges": 2,
+            "two_edge_denied": 2
+          },
+          "approvals": 13,
+          "clock": {
+            "skewed_within_range": 186,
+            "skew_out_of_range": 34,
+            "delayed_1_to_4_s": 173,
+            "delayed_over_5_s": 39
+          }
+        },
+        "detector": {
+          "alerts_by_rule": {
+            "LM-2": 4,
+            "PRIV-1": 6,
+            "LM-1": 4,
+            "LM-3": 3
+          },
+          "late": 39,
+          "reordered": 50,
+          "clock_unsupported": 34,
+          "processing_ms_per_event": 0.007293745724907063
+        },
+        "score": {
+          "incident": {
+            "tp": 17,
+            "fp": 0,
+            "fn": 4,
+            "precision": 1,
+            "recall": 0.8095238095238095,
+            "f1": 0.8947368421052632,
+            "recall_detectable": 1,
+            "detectable_incidents": 17,
+            "evasive_incidents": 4
+          },
+          "event": {
+            "tp": 44,
+            "fp": 0,
+            "fn": 10,
+            "precision": 1,
+            "recall": 0.8148148148148148,
+            "f1": 0.8979591836734693
+          },
+          "benign_events": 1291,
+          "false_alerts_per_1000_benign": 0,
+          "median_tta_ms": 4819.007293745725,
+          "missed_detectable": [],
+          "missed_evasive": [
+            {
+              "incident_id": "inc-204-18",
+              "variant": "low_and_slow_3_edges",
+              "evasive": true
+            },
+            {
+              "incident_id": "inc-204-19",
+              "variant": "low_and_slow_3_edges",
+              "evasive": true
+            },
+            {
+              "incident_id": "inc-204-20",
+              "variant": "two_edge_denied",
+              "evasive": true
+            },
+            {
+              "incident_id": "inc-204-21",
+              "variant": "two_edge_denied",
+              "evasive": true
+            }
+          ],
+          "false_alerts": [],
+          "matched": [
+            {
+              "alert_id": "alert-005",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-204-1",
+              "variant": "unapproved_escalation:no_approval"
+            },
+            {
+              "alert_id": "alert-002",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-204-3",
+              "variant": "unapproved_escalation:wrong_role_approval"
+            },
+            {
+              "alert_id": "alert-003",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-204-2",
+              "variant": "unapproved_escalation:other_subject_approval"
+            },
+            {
+              "alert_id": "alert-006",
+              "rule_id": "LM-1",
+              "incident_id": "inc-204-7",
+              "variant": "chain_3_edges_denied"
+            },
+            {
+              "alert_id": "alert-007",
+              "rule_id": "LM-3",
+              "incident_id": "inc-204-15",
+              "variant": "deny_burst_2_targets"
+            },
+            {
+              "alert_id": "alert-008",
+              "rule_id": "LM-1",
+              "incident_id": "inc-204-10",
+              "variant": "chain_3_edges_denied"
+            },
+            {
+              "alert_id": "alert-009",
+              "rule_id": "LM-1",
+              "incident_id": "inc-204-8",
+              "variant": "chain_3_edges_denied"
+            },
+            {
+              "alert_id": "alert-010",
+              "rule_id": "LM-3",
+              "incident_id": "inc-204-16",
+              "variant": "deny_burst_2_targets"
+            },
+            {
+              "alert_id": "alert-012",
+              "rule_id": "LM-1",
+              "incident_id": "inc-204-9",
+              "variant": "chain_3_edges_denied"
+            },
+            {
+              "alert_id": "alert-014",
+              "rule_id": "LM-3",
+              "incident_id": "inc-204-17",
+              "variant": "deny_burst_2_targets"
+            },
+            {
+              "alert_id": "alert-017",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-204-4",
+              "variant": "unapproved_escalation:no_approval"
+            },
+            {
+              "alert_id": "alert-011",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-204-5",
+              "variant": "expired_approval"
+            },
+            {
+              "alert_id": "alert-013",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-204-6",
+              "variant": "expired_approval"
+            },
+            {
+              "alert_id": "alert-015",
+              "rule_id": "LM-2",
+              "incident_id": "inc-204-12",
+              "variant": "two_edge_allowed"
+            },
+            {
+              "alert_id": "alert-016",
+              "rule_id": "LM-2",
+              "incident_id": "inc-204-14",
+              "variant": "two_edge_allowed"
+            },
+            {
+              "alert_id": "alert-001",
+              "rule_id": "LM-2",
+              "incident_id": "inc-204-13",
+              "variant": "one_edge_allowed_sensitive"
+            },
+            {
+              "alert_id": "alert-004",
+              "rule_id": "LM-2",
+              "incident_id": "inc-204-11",
+              "variant": "one_edge_allowed_sensitive"
+            }
+          ]
+        }
+      },
+      {
+        "seed": 205,
+        "dataset": {
+          "seed": 205,
+          "events": 1363,
+          "benign_events": 1309,
+          "malicious_events": 54,
+          "incidents": 21,
+          "evasive_incidents": 4,
+          "incidents_by_variant": {
+            "unapproved_escalation:no_approval": 2,
+            "unapproved_escalation:other_subject_approval": 1,
+            "unapproved_escalation:wrong_role_approval": 1,
+            "expired_approval": 2,
+            "chain_3_edges_denied": 4,
+            "one_edge_allowed_sensitive": 2,
+            "two_edge_allowed": 2,
+            "deny_burst_2_targets": 3,
+            "low_and_slow_3_edges": 2,
+            "two_edge_denied": 2
+          },
+          "approvals": 13,
+          "clock": {
+            "skewed_within_range": 377,
+            "skew_out_of_range": 0,
+            "delayed_1_to_4_s": 197,
+            "delayed_over_5_s": 36
+          }
+        },
+        "detector": {
+          "alerts_by_rule": {
+            "PRIV-1": 6,
+            "LM-2": 4,
+            "LM-1": 4,
+            "LM-3": 3
+          },
+          "late": 36,
+          "reordered": 48,
+          "clock_unsupported": 0,
+          "processing_ms_per_event": 0.0066407057960381505
+        },
+        "score": {
+          "incident": {
+            "tp": 17,
+            "fp": 0,
+            "fn": 4,
+            "precision": 1,
+            "recall": 0.8095238095238095,
+            "f1": 0.8947368421052632,
+            "recall_detectable": 1,
+            "detectable_incidents": 17,
+            "evasive_incidents": 4
+          },
+          "event": {
+            "tp": 44,
+            "fp": 0,
+            "fn": 10,
+            "precision": 1,
+            "recall": 0.8148148148148148,
+            "f1": 0.8979591836734693
+          },
+          "benign_events": 1309,
+          "false_alerts_per_1000_benign": 0,
+          "median_tta_ms": 4818.006640705796,
+          "missed_detectable": [],
+          "missed_evasive": [
+            {
+              "incident_id": "inc-205-18",
+              "variant": "low_and_slow_3_edges",
+              "evasive": true
+            },
+            {
+              "incident_id": "inc-205-19",
+              "variant": "low_and_slow_3_edges",
+              "evasive": true
+            },
+            {
+              "incident_id": "inc-205-20",
+              "variant": "two_edge_denied",
+              "evasive": true
+            },
+            {
+              "incident_id": "inc-205-21",
+              "variant": "two_edge_denied",
+              "evasive": true
+            }
+          ],
+          "false_alerts": [],
+          "matched": [
+            {
+              "alert_id": "alert-007",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-205-2",
+              "variant": "unapproved_escalation:other_subject_approval"
+            },
+            {
+              "alert_id": "alert-016",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-205-4",
+              "variant": "unapproved_escalation:no_approval"
+            },
+            {
+              "alert_id": "alert-004",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-205-1",
+              "variant": "unapproved_escalation:no_approval"
+            },
+            {
+              "alert_id": "alert-006",
+              "rule_id": "LM-1",
+              "incident_id": "inc-205-8",
+              "variant": "chain_3_edges_denied"
+            },
+            {
+              "alert_id": "alert-008",
+              "rule_id": "LM-3",
+              "incident_id": "inc-205-15",
+              "variant": "deny_burst_2_targets"
+            },
+            {
+              "alert_id": "alert-009",
+              "rule_id": "LM-1",
+              "incident_id": "inc-205-9",
+              "variant": "chain_3_edges_denied"
+            },
+            {
+              "alert_id": "alert-010",
+              "rule_id": "LM-1",
+              "incident_id": "inc-205-10",
+              "variant": "chain_3_edges_denied"
+            },
+            {
+              "alert_id": "alert-013",
+              "rule_id": "LM-3",
+              "incident_id": "inc-205-16",
+              "variant": "deny_burst_2_targets"
+            },
+            {
+              "alert_id": "alert-015",
+              "rule_id": "LM-3",
+              "incident_id": "inc-205-17",
+              "variant": "deny_burst_2_targets"
+            },
+            {
+              "alert_id": "alert-017",
+              "rule_id": "LM-1",
+              "incident_id": "inc-205-7",
+              "variant": "chain_3_edges_denied"
+            },
+            {
+              "alert_id": "alert-001",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-205-5",
+              "variant": "expired_approval"
+            },
+            {
+              "alert_id": "alert-002",
+              "rule_id": "LM-2",
+              "incident_id": "inc-205-12",
+              "variant": "two_edge_allowed"
+            },
+            {
+              "alert_id": "alert-005",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-205-3",
+              "variant": "unapproved_escalation:wrong_role_approval"
+            },
+            {
+              "alert_id": "alert-012",
+              "rule_id": "LM-2",
+              "incident_id": "inc-205-14",
+              "variant": "two_edge_allowed"
+            },
+            {
+              "alert_id": "alert-014",
+              "rule_id": "PRIV-1",
+              "incident_id": "inc-205-6",
+              "variant": "expired_approval"
+            },
+            {
+              "alert_id": "alert-003",
+              "rule_id": "LM-2",
+              "incident_id": "inc-205-13",
+              "variant": "one_edge_allowed_sensitive"
+            },
+            {
+              "alert_id": "alert-011",
+              "rule_id": "LM-2",
+              "incident_id": "inc-205-11",
+              "variant": "one_edge_allowed_sensitive"
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

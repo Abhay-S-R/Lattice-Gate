@@ -30,7 +30,32 @@ const compat = {
 const COMMANDS = new Map();
 // Registered after the error classes exist (command modules import them from here).
 module.exports = { COMMANDS, UsageError, CommandError };
-for (const mod of [compat, require('./verify-log.cjs'), require('./keys.cjs'), require('./checkpoint.cjs'), require('./alerts.cjs')]) {
+// Phase 5 detector commands. The wrappers live here so src/cli/detect.cjs stays
+// inside the detector's require graph (tests/unit/detect/no-label-leak.test.cjs).
+const detectCli = require('./detect.cjs');
+const detect = {
+  name: 'detect',
+  describe: detectCli.describe,
+  usage: detectCli.USAGE.trimEnd(),
+  options: detectCli.options,
+  run: ({ values, positionals }) => {
+    if (positionals.length) throw new UsageError(`unexpected argument '${oneLine(positionals[0])}'`);
+    return detectCli.run(values);
+  },
+};
+const benchDetectCli = require('./bench-detect.cjs');
+const bench = {
+  name: 'bench',
+  describe: `benchmarks; 'bench detect': ${benchDetectCli.describe}`,
+  usage: benchDetectCli.USAGE.trimEnd(),
+  options: benchDetectCli.options,
+  run: ({ values, positionals }) => {
+    if (positionals.length !== 1 || positionals[0] !== 'detect') throw new UsageError("expected 'bench detect'");
+    return benchDetectCli.run(values);
+  },
+};
+
+for (const mod of [compat, require('./verify-log.cjs'), require('./keys.cjs'), require('./checkpoint.cjs'), require('./alerts.cjs'), detect, bench]) {
   COMMANDS.set(mod.name, mod);
 }
 

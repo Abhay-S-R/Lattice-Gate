@@ -50,6 +50,8 @@ Exit code is 0 for every answer, denials included. Only a `setup` or `revoke` th
 | `keys init --out <dir> [--force]` | Creates the operator's ML-DSA-65 audit-signing key pair (private key mode 0600) |
 | `checkpoint (--adapter <stateDir> \| --db <file>) --key <file> --anchor <file>` | Signs the current log head and appends it to an anchor file kept **outside** the store |
 | `alerts (--adapter <stateDir> \| --db <file>) [--json] [--limit N]` | Lists self-monitoring alerts, newest first, with identifiers escaped for safe terminal display |
+| `detect --events <events.csv\|.jsonl> [--approvals <approvals.json>] [--baseline <baseline.json>] [--json]` | Runs the explainable detector (privilege changes without approval, lateral-movement candidates, clock-skew and reordering handling) and prints each alert with its reason, plus a timeline with raw, received and corrected times. Example: `node kig.cjs detect --events ../Track-4-Toolkit/practice/events.csv --approvals ../Track-4-Toolkit/practice/approvals.json` |
+| `bench detect --seeds 101,102,103 --holdout 201-205` | Seeded synthetic detection benchmark: held-out precision, recall, F1, median time-to-alert and false alerts per 1,000 benign events (results and limits: [`evidence/phase5.md`](evidence/phase5.md)) |
 
 Operator flow for the adapter's log:
 

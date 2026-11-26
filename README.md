@@ -41,7 +41,26 @@ Exit code is 0 for every answer, denials included. Only a `setup` or `revoke` th
 
 ## Round 2 CLI
 
-`node kig.cjs <command>`. Available now: `node kig.cjs compat` checks that this machine's Node supports everything the project needs. *(Full command list: Phase 2 onward.)*
+`node kig.cjs <command> [options]` (`node kig.cjs help` lists commands; `<command> --help` shows usage). Exit codes: 0 ok, 1 failed/broken, 2 usage error.
+
+| Command | Does |
+|---|---|
+| `compat` | Checks that this runtime supports everything KIG needs (crypto, SQLite concurrency and crash safety) |
+| `verify-log (--adapter <stateDir> \| --db <file>) [--anchor <file>]` | Verifies an audit log offline. Prints `OK <count> <head>` or `BROKEN seq=<n> <reason>`, where reason is `content_edit`, `missing_or_reordered`, `truncated`, `checkpoint_mismatch` or `invalid_checkpoint`. |
+| `keys init --out <dir> [--force]` | Creates the operator's ML-DSA-65 audit-signing key pair (private key mode 0600) |
+| `checkpoint (--adapter <stateDir> \| --db <file>) --key <file> --anchor <file>` | Signs the current log head and appends it to an anchor file kept **outside** the store |
+| `alerts (--adapter <stateDir> \| --db <file>) [--json] [--limit N]` | Lists self-monitoring alerts, newest first, with identifiers escaped for safe terminal display |
+
+Operator flow for the adapter's log:
+
+```sh
+node kig.cjs keys init --out ~/kig-operator
+node kig.cjs checkpoint --adapter "$TRACK4_STATE_DIR" --key ~/kig-operator/audit-signing.key --anchor ~/kig-operator/adapter-anchor.json
+node kig.cjs verify-log --adapter "$TRACK4_STATE_DIR" --anchor ~/kig-operator/adapter-anchor.json
+node kig.cjs alerts --adapter "$TRACK4_STATE_DIR"
+```
+
+Without an anchor, `verify-log` detects edits, deletions and reordering, but not removal of the newest records. The signed checkpoint in the anchor is what makes truncation and recomputed rewrites detectable. Whoever controls the anchor file controls which key is trusted, so keep it with the operator.
 
 ## Development
 

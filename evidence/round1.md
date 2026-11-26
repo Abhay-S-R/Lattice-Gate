@@ -28,3 +28,9 @@
 ## Release checklist
 
 The CI and Phase 1 verification results above are recorded as passed. PR approval/merge, README review, and the `round1-ready` tag are repository/release actions and are not evidenced by the test outputs in this file.
+
+## Captured logs (added in Task 1.17)
+
+- `evidence/arm64-npm-test-summary.txt`: `npm run judge -- npm test` in the emulated linux/arm64 replica. 217 tests, 216 pass, 0 fail, 1 skipped (interop, since this replica run had no `pqcrypto`; interop 25/25 is recorded above). Duration about 16 minutes under emulation.
+- `evidence/validate-arm64.txt`: `npm run judge -- node scripts/validate.cjs` in the same replica. `Local scenario passed.`
+- CI: the validator step in `.github/workflows/ci.yml` is now blocking (no `continue-on-error`).

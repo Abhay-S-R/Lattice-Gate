@@ -59,6 +59,70 @@ async function stop(home = kigHome(), env = process.env) {
   }
 }
 
+/** Spawn one service and wait until it is healthy. Pushes {id, child, record} to launched before waiting. */
+async function launch(home, env, id, launched) {
+  const L = layout(home), ps = ports(env);
+  const instance = cryptoProvider.random(16).toString('hex');
+  const logfile = L.run.log(id);
+  const fd = fs.openSync(logfile, 'a', 0o600);
+  const childEnv = { ...env, KIG_HOME: path.resolve(home), KIG_PORT_BASE: String(ps.cp), KIG_INSTANCE_TOKEN: instance };
+  const args = [path.join(ROOT, 'src', id === 'cp' ? 'cp/server.cjs' : 'node/server.cjs')];
+  if (id !== 'cp') {
+    childEnv.KIG_NODE_ID = id;
+    const controlToken = cryptoProvider.random(32).toString('hex');
+    fs.writeFileSync(controlFile(L, id), `${controlToken}\n`, { mode: 0o600 });
+    childEnv.KIG_NODE_CONTROL_TOKEN = controlToken;
+  }
+  let child;
+  // The service uses absolute module paths and KIG_HOME; a normal local cwd
+  // also keeps Windows from trying to launch children from a UNC directory.
+  try { child = spawn(process.execPath, args, { cwd: os.tmpdir(), env: childEnv, detached: true, stdio: ['ignore', fd, fd] }); }
+  finally { fs.closeSync(fd); }
+  child.unref();
+  let launchError = null;
+  child.once('error', (e) => { launchError = e; });
+  const record = { pid: child.pid, instance };
+  launched.push({ id, child, record });
+  fs.writeFileSync(pidFile(L, id), `${JSON.stringify(record)}\n`, { mode: 0o600 });
+  const readyBy = Date.now() + 5000;
+  while (Date.now() < readyBy && !await probe(id, record, ps, 300)) {
+    if (launchError) throw launchError;
+    if (child.exitCode !== null) throw new Error(`${id} exited before becoming healthy (code ${child.exitCode})`);
+    await new Promise((r) => setTimeout(r, 40));
+  }
+  if (!await probe(id, record, ps)) {
+    let detail = 'no matching health response';
+    try {
+      const health = await call(healthUrl(id, ps), 'GET', null, { timeoutMs: 300 });
+      detail = `health returned status ${health.status}: ${JSON.stringify(health.json)}`;
+    } catch (e) { detail = String(e.message || e); }
+    throw new Error(`${id} failed to become healthy (${detail})`);
+  }
+  return record;
+}
+
+/**
+ * Restart ONE service (Phase 4 crash harness: the CP is restarted, with or without KIG_CRASH_AT,
+ * while the nodes keep running). A healthy instance is stopped first with SIGTERM; it is identified
+ * by its instance token, so an unrelated process that reused the pid is never signalled.
+ */
+async function restartService(home = kigHome(), env = process.env, id) {
+  if (!SERVICES.includes(id)) throw new TypeError('invalid service');
+  const L = layout(home), ps = ports(env);
+  const record = readRecord(pidFile(L, id));
+  if (record && await probe(id, record, ps)) {
+    try { process.kill(record.pid, 'SIGTERM'); } catch (e) { if (e.code !== 'ESRCH') throw e; }
+    const end = Date.now() + 3000;
+    while (Date.now() < end && await probe(id, record, ps, 100)) await new Promise((r) => setTimeout(r, 40));
+    if (await probe(id, record, ps, 100)) throw new Error(`${id} did not stop`);
+  }
+  const launched = [];
+  try { return await launch(home, env, id, launched); } catch (e) {
+    for (const { child } of launched) if (child.exitCode === null) { try { child.kill('SIGTERM'); } catch {} }
+    throw new Error(`${id} restart failed: ${String(e.message || e).split(/\r?\n/)[0]}`);
+  }
+}
+
 async function start(home = kigHome(), env = process.env, { nodes = NODE_IDS } = {}) {
   const wanted = new Set(nodes);
   if ([...wanted].some((n) => !NODE_IDS.includes(n))) throw new TypeError('invalid node list');
@@ -71,44 +135,7 @@ async function start(home = kigHome(), env = process.env, { nodes = NODE_IDS } =
 
   const launched = [];
   try {
-    for (const id of SERVICES) {
-      const instance = cryptoProvider.random(16).toString('hex');
-      const logfile = L.run.log(id);
-      const fd = fs.openSync(logfile, 'a', 0o600);
-      const childEnv = { ...env, KIG_HOME: path.resolve(home), KIG_PORT_BASE: String(ps.cp), KIG_INSTANCE_TOKEN: instance };
-      const args = [path.join(ROOT, 'src', id === 'cp' ? 'cp/server.cjs' : 'node/server.cjs')];
-      if (id !== 'cp') {
-        childEnv.KIG_NODE_ID = id;
-        const controlToken = cryptoProvider.random(32).toString('hex');
-        fs.writeFileSync(controlFile(L, id), `${controlToken}\n`, { mode: 0o600 });
-        childEnv.KIG_NODE_CONTROL_TOKEN = controlToken;
-      }
-      let child;
-      // The service uses absolute module paths and KIG_HOME; a normal local cwd
-      // also keeps Windows from trying to launch children from a UNC directory.
-      try { child = spawn(process.execPath, args, { cwd: os.tmpdir(), env: childEnv, detached: true, stdio: ['ignore', fd, fd] }); }
-      finally { fs.closeSync(fd); }
-      child.unref();
-      let launchError = null;
-      child.once('error', (e) => { launchError = e; });
-      const record = { pid: child.pid, instance };
-      launched.push({ id, child, record });
-      fs.writeFileSync(pidFile(L, id), `${JSON.stringify(record)}\n`, { mode: 0o600 });
-      const readyBy = Date.now() + 5000;
-      while (Date.now() < readyBy && !await probe(id, record, ps, 300)) {
-        if (launchError) throw launchError;
-        if (child.exitCode !== null) throw new Error(`${id} exited before becoming healthy (code ${child.exitCode})`);
-        await new Promise((r) => setTimeout(r, 40));
-      }
-      if (!await probe(id, record, ps)) {
-        let detail = 'no matching health response';
-        try {
-          const health = await call(healthUrl(id, ps), 'GET', null, { timeoutMs: 300 });
-          detail = `health returned status ${health.status}: ${JSON.stringify(health.json)}`;
-        } catch (e) { detail = String(e.message || e); }
-        throw new Error(`${id} failed to become healthy (${detail})`);
-      }
-    }
+    for (const id of SERVICES) await launch(home, env, id, launched);
     return status(home, env);
   } catch (e) {
     for (const { child } of launched.reverse()) {
@@ -148,4 +175,4 @@ const down = {
 };
 const statusCommand = { ...base, name: 'status', describe: 'show health of the control plane and local nodes', usage: 'usage: node kig.cjs status' };
 
-module.exports = { name: 'supervisor', start, stop, status, up, down, statusCommand };
+module.exports = { name: 'supervisor', start, stop, status, restartService, up, down, statusCommand };

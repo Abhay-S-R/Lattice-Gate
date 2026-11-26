@@ -1,0 +1,515 @@
+﻿=== KIG Full Verification | commit f7a9e02 | 2026-11-26 22:37:14 ===
+
+==================== Phase 0: kig compat (x86-64) ====================
+
+> key-identity-guard@0.1.0 judge
+> node scripts/judge.cjs node kig.cjs compat
+
+INFO node v24.11.1 linux-x64 openssl 3.5.4 sqlite 3.50.4
+PASS hkdf-sha256 RFC 5869 TC1
+PASS aes-256-gcm round trip + tamper rejection
+PASS ml-kem-768 raw-public encapsulate/decapsulate
+PASS ml-kem-768 rejects invalid encapsulation key
+PASS ml-dsa-65 sign/verify with context separation
+PASS pkcs8 private key round trip (ml-dsa-65, ml-kem-768)
+PASS sqlite wal + strict tables
+PASS sqlite 8 processes x 25 chained appends
+PASS sqlite SIGKILL inside transaction leaves no partial row
+PASS sqlite VACUUM INTO copy readable
+PASS entry point stderr silent after warning suppression
+--- EXIT CODE: 0 ---
+
+==================== Phase 1: toolkit validate.py ====================
+
+> key-identity-guard@0.1.0 judge
+> node scripts/judge.cjs node scripts/validate.cjs
+
+Local lost-device validator. Runs trusted code with your user permissions.
+Fresh temporary state is not a security sandbox. Cryptography and latency are not tested.
+PASS [format] clean setup: JSON response matches required structure.
+PASS [setup] clean setup: Expected ready: true.
+PASS [format] owner before device loss: JSON response matches required structure.
+PASS [behavior] owner before device loss: Received allow with exact content.
+PASS [format] peer before device loss: JSON response matches required structure.
+PASS [behavior] peer before device loss: Received allow with exact content.
+PASS [format] wrong owner: JSON response matches required structure.
+PASS [behavior] wrong owner: Received deny without content.
+PASS [format] revoke lost-device owner: JSON response matches required structure.
+PASS [format] owner after revocation: JSON response matches required structure.
+PASS [behavior] owner after revocation: Received deny without content.
+PASS [format] audit revoked read: JSON response matches required structure.
+PASS [behavior] audit revoked read: Expected matching request_id and deny decision.
+PASS [format] unaffected peer: JSON response matches required structure.
+PASS [behavior] unaffected peer: Received allow with exact content.
+PASS [format] revocation persists across processes: JSON response matches required structure.
+PASS [behavior] revocation persists across processes: Received deny without content.
+PASS [format] fresh rerun setup: JSON response matches required structure.
+PASS [setup] fresh rerun setup: Expected ready: true in new state directory.
+PASS [format] fresh rerun owner: JSON response matches required structure.
+PASS [behavior] fresh rerun owner: Received allow with exact content.
+PASS [behavior] fake key stays out of output: Fake key marker must not appear in stdout or stderr.
+Local scenario passed.
+--- EXIT CODE: 0 ---
+
+==================== Phases 0/1/2/5: full npm test ====================
+
+> key-identity-guard@0.1.0 judge
+> node scripts/judge.cjs npm test
+
+
+> key-identity-guard@0.1.0 test
+> node --disable-warning=ExperimentalWarning --test --test-concurrency=1 "tests/**/*.test.cjs"
+
+Γ£ö warm: 8 parallel mixed read/revoke/audit after setup, x20 (5709.870036ms)
+Γ£ö cold: empty dir, 8 parallel revokes of distinct actors, x20 (5551.493857ms)
+Γ£ö cold: empty dir, revokes racing reads and audits, x20 (5946.76265ms)
+Γ£ö validator scenario (777.645448ms)
+Γ£ö stderr empty on success and stdout is one line of JSON (237.113042ms)
+Γ£ö protected_read end to end (331.495691ms)
+Γ£ö unknown op ΓåÆ unsupported_operation exit 0 (304.792305ms)
+Γ£ö missing or non-string op ΓåÆ invalid_request exit 0 (232.743487ms)
+Γ£ö non-object ΓåÆ invalid_request exit 0 (556.717794ms)
+Γ£ö invalid utf-8 bytes ΓåÆ invalid_request exit 0 (127.125466ms)
+Γ£ö oversize stdin (4 MiB + 1) ΓåÆ invalid_request exit 0 (195.187368ms)
+Γ£ö invalid input responses per op (┬º5.3) (712.623262ms)
+Γ£ö before setup: read/audit/protected_read deny and create nothing (256.571473ms)
+Γ£ö falls back to the OS temp dir when TRACK4_STATE_DIR is unset (226.421527ms)
+Γ£ö revoke on unwritable state dir ΓåÆ exit 1, empty stdout, fixed stderr line (181.030491ms)
+Γ£ö read on corrupt db ΓåÆ deny exit 0; revoke ΓåÆ exit 1; setup quarantines (453.596132ms)
+Γ£ö no lingering handles (process exits promptly) (183.939894ms)
+Γ£ö duplicate JSON keys: last wins (JSON.parse) (190.294157ms)
+Γ£ö SIGKILL inside a revoke transaction leaves no trace and the store keeps working (473.861914ms)
+Γ£ö SIGKILL inside the very first revoke (cold store) leaves a usable store (258.386936ms)
+Γ£ö the hang hook is inert outside NODE_ENV=test (78.788034ms)
+Γ£ö pqcrypto decapsulates protected_read: interop 25/25 (5104.048843ms)
+Γ£ö hostile ids as actor, asset and request_id: setup ΓåÆ read ΓåÆ revoke ΓåÆ audit (5159.655634ms)
+Γ£ö prototype keys in setup maps (553.434376ms)
+Γ£ö wrong types for every field (2840.838677ms)
+Γ£ö arrays instead of objects, null request, odd JSON (564.378504ms)
+Γ£ö duplicate JSON keys use the last value (134.699391ms)
+Γ£ö url-safe, whitespace and wrong-length keys deny with exit 0 and no ciphertext (467.317495ms)
+Γ£ö no deny response leaks a seeded body or the marker (2.42295ms)
+Γ£ö marker scan: stdout, stderr and every file under the state dir (1.787284ms)
+Γ£ö evaluate: each rule and its severity (5.850203ms)
+Γ£ö A-REVOKED-RETRY on read and protected_read by a revoked actor (16.538706ms)
+Γ£ö A-CROSS-OWNER on reading an existing asset of another owner (6.046624ms)
+Γ£ö A-INVALID-INPUT recorded when a store exists (8.468674ms)
+Γ£ö A-INVALID-INPUT: no store ΓåÆ nothing created (0.745577ms)
+Γ£ö A-INVALID-INPUT is never recorded for setup (state untouched) (5.080624ms)
+Γ£ö A-INVALID-KEY on a key that fails the FIPS 203 check (5.483765ms)
+Γ£ö A-HOSTILE-ID on any op; the id is not copied into detail (8.206846ms)
+Γ£ö burst fires once at the fifth deny (23.195492ms)
+Γ£ö burst ignores denies outside the window (2.551163ms)
+Γ£ö happy path no alerts (6.88001ms)
+Γ£ö responses identical with alerts on (38.845506ms)
+Γ£ö a failing alert rule never changes the response or the decision record (20.709935ms)
+Γ£ö chain verifies with alerts interleaved (68.36045ms)
+Γ£ö empty chain verifies with genesis head (9.471071ms)
+Γ£ö first event links to genesis; seq starts at 1 (3.960406ms)
+Γ£ö chain of 50 verifies (28.645137ms)
+Γ£ö append outside a transaction throws (3.596368ms)
+Γ£ö edited row detected (19.11736ms)
+Γ£ö edited timestamp detected (7.724892ms)
+Γ£ö edited row with recomputed hash breaks the next link (7.076526ms)
+Γ£ö deleted row detected (13.701205ms)
+Γ£ö reordered rows detected (6.098725ms)
+Γ£ö injection actor is one event (4.021112ms)
+Γ£ö client strings stored D-04 encoded; detail is JSON (3.919602ms)
+Γ£ö missing optional fields stored as NULL (3.265835ms)
+Γ£ö latestAccessDecision returns last of reused id (3.489358ms)
+Γ£ö scoped to generation (4.124123ms)
+Γ£ö countRecentDenies (3.849495ms)
+Γ£ö publicFromPrivate derives the matching public key (9.045828ms)
+Γ£ö keys init writes a private and a public key; private is 0600 (109.686445ms)
+Γ£ö keys init refuses to overwrite without --force (335.385485ms)
+Γ£ö keys without a subcommand ΓåÆ exit 2 (129.14514ms)
+Γ£ö checkpoint writes an anchor outside the store and does not touch the store (157.660264ms)
+Γ£ö verify-log --anchor on an untouched store ΓåÆ OK (236.016197ms)
+Γ£ö growth after the checkpoint is fine; a second checkpoint links to the first (493.589805ms)
+Γ£ö truncated after anchored checkpoint detected (301.809142ms)
+Γ£ö rewritten chain (recomputed hashes) detected by the checkpoint (315.34153ms)
+Γ£ö forged checkpoint signature rejected (242.728885ms)
+Γ£ö broken prev link between checkpoints rejected (344.918962ms)
+Γ£ö anchor for a different store rejected (252.510888ms)
+Γ£ö unreadable anchor file ΓåÆ exit 1, one line (77.177712ms)
+Γ£ö checkpoint refuses to sign a broken chain (164.415456ms)
+Γ£ö checkpoint refuses a key that does not match the anchor (317.78498ms)
+Γ£ö checkpoint refuses to extend an anchor the store no longer matches (244.655683ms)
+Γ£ö safe() escapes control, C1, bidi and lone surrogates; plain text stays readable (2.328839ms)
+Γ£ö safeJson output is valid JSON with the same value and no raw dangerous characters (1.135216ms)
+Γ£ö kig alerts lists every P0-10 rule, newest first (95.011741ms)
+Γ£ö terminal output never contains raw escape, C1 or bidi characters (84.248137ms)
+Γ£ö --json gives decodable records with the true identifiers (99.199671ms)
+Γ£ö --limit keeps the newest N (415.626511ms)
+Γ£ö store without alerts ΓåÆ "no alerts", exit 0 (95.194159ms)
+Γ£ö tampered alert detail does not break or inject into the listing (100.762631ms)
+Γ£ö every registered command has the module shape (2.625269ms)
+Γ£ö kig help lists every command on stdout, exit 0 (86.736092ms)
+Γ£ö no command prints usage on stderr, exit 2 (77.660262ms)
+Γ£ö unknown command exits 2 with help (83.473458ms)
+Γ£ö unknown option exits 2 with that command usage (77.971794ms)
+Γ£ö <command> --help prints that command usage, exit 0 (76.788173ms)
+Γ£ö compat still works through the router (528.134145ms)
+Γ£ö a command that throws a UsageError exits 2, other errors exit 1 with one line (1.469251ms)
+Γ£ö compat.run() returns only passes on this machine (467.154294ms)
+Γ£ö node kig.cjs compat prints PASS lines, exits 0, stderr empty (470.83087ms)
+Γ£ö unknown kig command exits 2 with usage on stderr (67.824353ms)
+Γ£ö only provider.cjs imports node:crypto (8.920915ms)
+Γ£ö missing file not created (3.789489ms)
+Γ£ö create sets wal and version (2.233529ms)
+Γ£ö init runs once (1.66567ms)
+Γ£ö schema mismatch (3.61557ms)
+Γ£ö uninitialised file opened without create is missing (1.042307ms)
+Γ£ö corrupt (2.293236ms)
+Γ£ö tx commits and returns value (1.250928ms)
+Γ£ö tx rollback leaves no row (3.561165ms)
+Γ£ö tx rejects async fn (1.616366ms)
+Γ£ö isBusy (0.645767ms)
+Γ£ö busy writer becomes StateError locked after retries (211.249658ms)
+Γ£ö parallel create (cold-start race, 8 children x 20 rounds) (3993.764429ms)
+Γ£ö quarantine renames all three files (2.594633ms)
+Γ£ö quarantine never overwrites an earlier quarantine (0.587552ms)
+Γ£ö loadApprovals indexes both shapes in Maps and parses times (5.5725ms)
+Γ£ö loadApprovals rejects malformed approvals loudly (2.624136ms)
+Γ£ö evt-003..005 approved (10.205315ms)
+Γ£ö evt-008 unapproved escalation links evt-009 (3.953354ms)
+Γ£ö evt-016 revoke_role matches change-101 (3.273494ms)
+Γ£ö isExpectedEnforcementDenial true for evt-017 and evt-018, false for unrelated target billing (3.313697ms)
+Γ£ö valid_until_utc is exclusive (2.297806ms)
+Γ£ö validity uses corrected time, not raw source time (0.834875ms)
+Γ£ö subject mismatch and role mismatch rejected with explicit reason (1.976177ms)
+Γ£ö approver cross-check against a prior approve_role_change event (1.633046ms)
+Γ£ö role decrease without approval never raises high alert (0.817274ms)
+Γ£ö a denied role change is not an escalation (0.33233ms)
+Γ£ö a change into an unknown role is treated as an increase (0.497944ms)
+Γ£ö PRIV-2 links only allowed accesses in the same session or flow, within the link window (1.920973ms)
+Γ£ö prototype-key actor/approval_id (__proto__, constructor) handled safely via Map (0.874879ms)
+Γ£ö edgeKey cannot collide on delimiters (2.154393ms)
+Γ£ö Baseline from documented edges, corpus and file; summary (6.978326ms)
+Γ£ö evt-010..012 grouped as ONE LM-1 candidate lateral-movement alert (9.473549ms)
+Γ£ö evt-007..009 produce ZERO LM alerts (3.392704ms)
+Γ£ö evt-017 and evt-018 classified expected_enforcement, ZERO LM alerts (4.886038ms)
+Γ£ö evt-020 single isolated denial produces ZERO alerts (1.822464ms)
+Γ£ö window invariance (8.736584ms)
+Γ£ö LM-2 fires on single allowed unseen edge to billing/archive/identity (2.286505ms)
+Γ£ö LM-2: a two-edge allowed path in one session is one alert (1.060396ms)
+Γ£ö LM-1 with an allowed edge is high severity and says what succeeded (1.433629ms)
+Γ£ö LM-3 fires on 3 denials across 2 distinct unseen targets (1.291916ms)
+Γ£ö LM-3 does NOT fire on 2 denials (1.519837ms)
+Γ£ö LM-3 needs 2 distinct targets (0.900981ms)
+Γ£ö LM-1 respects the window: low-and-slow is not a sequence (1.414127ms)
+Γ£ö LM-1 groups per actor/session/flow; other identities do not combine (0.686261ms)
+Γ£ö later unseen edges extend the open LM-1 alert instead of opening another (1.589343ms)
+Γ£ö order_uncertain propagates from supporting events to alert (1.285115ms)
+Γ£ö prototype-named identities and services are ordinary keys (0.510746ms)
+Γ£ö alert carries last evidence receipt and simulated emission time (1.56454ms)
+Γ£ö mulberry32 is deterministic and in [0, 1) (4.329488ms)
+Γ£ö deterministic per seed (191.015927ms)
+Γ£ö different seeds produce different datasets (64.768908ms)
+Γ£ö dataset shape: size, scenario mix, clock stress, ground truth consistent (34.600703ms)
+Γ£ö warm-up corpus covers every routine edge and no probe edge (23.916145ms)
+Γ£ö disjoint seed enforcement (1.325318ms)
+Γ£ö score: one-to-one matching, false alerts, misses, event level kept separate (2.832354ms)
+Γ£ö held-out benchmark quality gate (424.662578ms)
+Γ£ö benchmark is reproducible from its seeds (182.617674ms)
+Γ£ö parseSeeds accepts lists and ranges (1.175205ms)
+Γ£ö CLI node kig.cjs bench detect --seeds 101,102 --holdout 201,202 --out <tmp> --json (385.75579ms)
+Γ£ö CLI human output prints the held-out metrics (268.759999ms)
+Γ£ö CLI rejects bad seeds and overlapping sets with exit 2 (309.709871ms)
+Γ£ö CLI on an unwritable output location still prints and exits 0 (267.352172ms)
+Γ£ö config defaults match the plan (2.4) (8.780588ms)
+Γ£ö mergeConfig overrides, validates and keeps defaults (1.104299ms)
+Γ£ö parseCsv parses quoted fields, embedded commas, escaped quotes, and CRLF (1.581842ms)
+Γ£ö parseCsv normalizes every field and keeps raw strings (0.77637ms)
+Γ£ö parseCsv quarantines malformed rows into rejects without throwing (1.266013ms)
+Γ£ö parseCsv rejects quote errors per row and keeps going (0.772869ms)
+Γ£ö parseCsv throws on a missing header column (0.633156ms)
+Γ£ö parseCsv tolerates BOM, extra columns and blank trailing lines (0.44534ms)
+Γ£ö parseJsonl produces identical normalized events to parseCsv (3.541118ms)
+Γ£ö parseJsonl rejects non-objects, bad JSON and missing fields (1.644648ms)
+Γ£ö loadEventsFile dispatches on extension (2.030582ms)
+Γ£ö clock evt-015 (0.33853ms)
+Γ£ö clock does not mutate its input (0.386335ms)
+Γ£ö clock offset +6000 and -5001 flagged clockUnsupported and NOT clamped (0.548849ms)
+Γ£ö reorder evt-014 then evt-013 (1.280115ms)
+Γ£ö reorder releases only once the watermark passes (0.878978ms)
+Γ£ö reorder late event past 5 s watermark marked late=true and still emitted (0.625156ms)
+Γ£ö reorder overlapping uncertainty intervals (0.563251ms)
+Γ£ö overlap is only checked within the same actor and session (0.657859ms)
+Γ£ö overlap detected across separate release batches (0.386235ms)
+Γ£ö clock-unsupported events are ordered by receipt and never advance the watermark (0.480443ms)
+Γ£ö released events carry a simulated collector release time (watermark wait, at most the lateness) (0.471743ms)
+Γ£ö a quiet stream still drains: the wait never exceeds the lateness (0.376434ms)
+Γ£ö an arrival older than the collector clock minus lateness is late (0.21952ms)
+Γ£ö detector modules never reference ground truth, the scorer, the generator or node:crypto (5.764117ms)
+Γ£ö detector modules import only node built-ins and each other (no packages) (3.586422ms)
+Γ£ö require graph from the detector entry points never reaches generator.cjs or bench.cjs (2.841255ms)
+Γ£ö full 22-event practice regression (18.987102ms)
+Γ£ö window invariance 30 s / 60 s / 120 s (14.197973ms)
+Γ£ö detect is deterministic apart from processing time (4.665319ms)
+Γ£ö detect accepts a plain approvals object and defaults (3.529517ms)
+Γ£ö CLI node kig.cjs detect --events ... --approvals ... --json (95.785388ms)
+Γ£ö CLI human output names the alerts and the timeline (79.132895ms)
+Γ£ö CLI --window-ms changes the config and is validated (137.414922ms)
+Γ£ö CLI exits 2 on missing or unreadable input (277.908819ms)
+Γ£ö CLI control-character escaping (146.752859ms)
+Γ£ö kig help lists detect (68.663057ms)
+Γ£ö layout (3.23439ms)
+Γ£ö null differs from empty string (0.602554ms)
+Γ£ö boundary safety (0.549349ms)
+Γ£ö label is domain-separated (0.432239ms)
+Γ£ö injection (0.347431ms)
+Γ£ö lone surrogate is distinct from U+FFFD (1.461131ms)
+Γ£ö integers: number and bigint agree, negatives ok (0.862177ms)
+Γ£ö rejects 1.5 (0.938584ms)
+Γ£ö rejects unsafe and out-of-range integers and other types (0.995189ms)
+Γ£ö deterministic (2.11789ms)
+Γ£ö round trip (1.33022ms)
+Γ£ö distinct (0.364932ms)
+Γ£ö enc output is well-formed (safe for SQLite TEXT) (0.354932ms)
+Γ£ö isHostile (0.392835ms)
+Γ£ö isId (0.368333ms)
+Γ£ö limits values (0.176516ms)
+Γ£ö matches denied read (14.418549ms)
+Γ£ö matches allowed read and records a hit (5.861504ms)
+Γ£ö latest of reused id (5.688796ms)
+Γ£ö unknown id deny and audit_lookup_miss recorded (6.16722ms)
+Γ£ö audit queries do not count as access decisions (8.86316ms)
+Γ£ö previous generation id is unknown (8.521742ms)
+Γ£ö exactly two keys, in order (5.478384ms)
+Γ£ö hostile request ids round-trip exactly and stay distinct (10.39574ms)
+Γ£ö audit before setup: deny, no file created (0.803741ms)
+Γ£ö audit after revoke-only store (gen 0): deny (4.214219ms)
+Γ£ö owner gets verifiable proof (29.201715ms)
+Γ£ö two calls give different ciphertexts, both verify (12.108929ms)
+Γ£ö revoked actor gets deny with one key (7.670898ms)
+Γ£ö not owner and unknown asset deny (6.897758ms)
+Γ£ö invalid 0xFF key ΓåÆ deny + audit rule invalid_public_key (8.889061ms)
+Γ£ö unauthorized request with a bad key is denied by policy first (4.568137ms)
+Γ£ö unicode challenge and body (20.702974ms)
+Γ£ö lone surrogate body is hashed as Node UTF-8 (U+FFFD) (13.935123ms)
+Γ£ö empty challenge and empty body (17.507808ms)
+Γ£ö shared secret not in response or db (17.861327ms)
+Γ£ö optional request_id is recorded so audit can find it (17.578512ms)
+Γ£ö no store ΓåÆ deny, nothing created (2.69844ms)
+Γ£ö revocation between authorize and record ΓåÆ deny is recorded, no ciphertext (10.466543ms)
+Γ£ö failure recording the allow ΓåÆ deny (9.950317ms)
+Γ£ö owner allowed exact body (12.582853ms)
+Γ£ö unicode body (6.536639ms)
+Γ£ö wrong owner denied (4.270221ms)
+Γ£ö deny response has exactly one key (8.505441ms)
+Γ£ö revoked owner then denied (6.565041ms)
+Γ£ö read before setup denies and creates no file (0.661634ms)
+Γ£ö read in generation 0 (revoke before setup) denies without writing (6.075716ms)
+Γ£ö every read appends one access event with rule (12.373542ms)
+Γ£ö audit sees the read decision (7.538191ms)
+Γ£ö body is never written to the audit log (4.183617ms)
+Γ£ö revoke returns {} and records the actor (16.342648ms)
+Γ£ö peer unaffected (5.347077ms)
+Γ£ö idempotent (7.857808ms)
+Γ£ö unknown actor accepted (5.735498ms)
+Γ£ö already-disabled actor: revoke is a no-op on the row (6.009812ms)
+Γ£ö hostile actor ids are distinct and exact (12.970973ms)
+Γ£ö revoke before setup persists; next setup replaces it (D-01) (8.808057ms)
+Γ£ö revoke after setup survives process restart (5.840203ms)
+Γ£ö corrupt db: revoke throws and does not quarantine (2.31512ms)
+Γ£ö fresh setup ready (12.504349ms)
+Γ£ö second setup replaces data (5.862004ms)
+Γ£ö disabled actors stored as revoked; epoch bumps once per setup (5.756598ms)
+Γ£ö asset union: owner without contents and contents without owner are NULL (3.299271ms)
+Γ£ö prototype keys and hostile ids are ordinary distinct assets (4.597338ms)
+Γ£ö empty setup is valid (4.179816ms)
+Γ£ö corrupt db quarantined and replaced (5.117666ms)
+Γ£ö wrong schema version quarantined and replaced (7.056066ms)
+Γ£ö marker never persisted (3.535584ms)
+Γ£ö state dir created with mode 0700 (2.49983ms)
+Γ£ö allow returns exact body (8.86846ms)
+Γ£ö revoked owner denied even though owner (5.010059ms)
+Γ£ö revocation is checked before asset existence (1.335369ms)
+Γ£ö unknown asset (1.871097ms)
+Γ£ö unknown asset on an empty store (1.944901ms)
+Γ£ö asset with owner but no contents (1.847096ms)
+Γ£ö asset with contents but no owner (7.919911ms)
+Γ£ö not owner (2.068408ms)
+Γ£ö deny has no body key (2.646637ms)
+Γ£ö revoking one actor leaves other owners allowed (3.989807ms)
+Γ£ö prototype-named ids are ordinary identities (8.318832ms)
+Γ£ö lone surrogate and U+FFFD are different actors (4.075411ms)
+Γ£ö NUL and injection-shaped ids are compared exactly (1.773892ms)
+Γ£ö empty-string ids work (1.467676ms)
+Γ£ö policy does not write (1.752891ms)
+Γ£ö hkdf RFC 5869 TC1 (3.836799ms)
+Γ£ö aead round trip and AAD tamper (2.946552ms)
+Γ£ö aead rejects wrong key or nonce length (0.625132ms)
+Γ£ö kem raw round trip (31.180518ms)
+Γ£ö kem KeyObject encapsulate round trip (1.34927ms)
+Γ£ö kem rejects bad keys (1.688988ms)
+Γ£ö ml-dsa context separation (5.104065ms)
+Γ£ö sign rejects unknown context (5.703796ms)
+Γ£ö private key export/import round trip (ML-DSA) (6.704847ms)
+Γ£ö private key export/import round trip (ML-KEM) (1.291667ms)
+Γ£ö public key export/import round trip (4.04761ms)
+Γ£ö hmac helpers (2.994455ms)
+Γ£ö sha256 known answer (1.437175ms)
+Γ£ö selfTest all pass (32.929709ms)
+Γ£ö VERSION matches limits (2.663239ms)
+Γ£ö init creates tables and meta (5.028161ms)
+Γ£ö db_id differs per database (4.402828ms)
+Γ£ö setMeta and getMeta (3.025957ms)
+Γ£ö audit_events UPDATE aborts (3.364974ms)
+Γ£ö audit_events DELETE aborts (5.876505ms)
+Γ£ö tables are STRICT (2.627937ms)
+Γ£ö constraints: revoked source and audit decision (1.876598ms)
+Γ£ö assets owner/body nullable (2.667139ms)
+Γ£ö adapterDbPath (1.279566ms)
+Γ£ö fixture key is 1580 chars and uses + and / (4.220319ms)
+Γ£ö OPS lists exactly the five operations (1.500878ms)
+Γ£ö setup accepts proto keys (0.645034ms)
+Γ£ö setup converts disabled to a Set and keeps opaque ids exactly (0.410322ms)
+Γ£ö setup allows assets present in only one of owners/contents (0.341318ms)
+Γ£ö setup rejects non-string owner value (0.40102ms)
+Γ£ö setup rejects non-string content value (0.469025ms)
+Γ£ö setup rejects disabled not array (0.343018ms)
+Γ£ö setup rejects owners/contents that are not plain objects, or missing fields (0.876945ms)
+Γ£ö setup rejects over-long ids (owner value, asset key, disabled entry) (0.825043ms)
+Γ£ö setup accepts long bodies (bodies are not identifiers) (0.438723ms)
+Γ£ö key_material not in req (0.488926ms)
+Γ£ö key_material of any type is ignored, not validated (0.536228ms)
+Γ£ö read returns exactly actor, asset, request_id (0.544128ms)
+Γ£ö read rejects missing request_id (0.253413ms)
+Γ£ö read rejects number actor (3.419577ms)
+Γ£ö read rejects 8193-char id and accepts 8192 (0.39292ms)
+Γ£ö read accepts hostile-looking ids (they are opaque) (0.455024ms)
+Γ£ö revoke requires a string actor (1.022953ms)
+Γ£ö audit requires a string request_id (0.496725ms)
+Γ£ö protected_read returns decoded 1184-byte key (0.910747ms)
+Γ£ö base64 strict (0.96655ms)
+Γ£ö base64 strict rejects non-canonical trailing bits (0.593131ms)
+Γ£ö base64 strict: misc shapes (0.410721ms)
+Γ£ö challenge over 4096 rejected (0.435123ms)
+Γ£ö optional request_id on protected_read (0.334817ms)
+Γ£ö protected_read rejects non-string actor/asset (0.326417ms)
+Γ£ö unknown op and non-object input are rejected (0.226412ms)
+Γ£ö fields are read as own properties only (0.126106ms)
+Γ£ö failure reasons are fixed codes that never echo client data (0.600531ms)
+Γ£ö hostileIds lists hostile identifiers from each req shape (1.234164ms)
+Γ£ö hostileIds reports each id once (0.271314ms)
+Γ£ö openReadOnly: missing file ΓåÆ StateError missing, file not created (3.137763ms)
+Γ£ö openReadOnly: writes are refused (16.979481ms)
+Γ£ö untouched store: OK <count> <head>, exit 0 (98.980635ms)
+Γ£ö --adapter <stateDir> resolves the adapter store (84.529186ms)
+Γ£ö verify-log does not modify the store (95.322745ms)
+Γ£ö edited row ΓåÆ BROKEN seq=N content_edit, exit 1 (118.497448ms)
+Γ£ö edited actor (client string) ΓåÆ content_edit (92.756012ms)
+Γ£ö deleted row ΓåÆ missing_or_reordered at the gap (94.112983ms)
+Γ£ö reordered rows ΓåÆ missing_or_reordered (101.559669ms)
+Γ£ö injection actor stays one event with the true actor (106.672134ms)
+Γ£ö missing --db/--adapter ΓåÆ exit 2; both ΓåÆ exit 2 (141.44934ms)
+Γ£ö nonexistent store ΓåÆ exit 1, nothing created (67.63761ms)
+Γ£ö not a database ΓåÆ exit 1, one line (65.020674ms)
+Γä╣ tests 347
+Γä╣ suites 0
+Γä╣ pass 347
+Γä╣ fail 0
+Γä╣ cancelled 0
+Γä╣ skipped 0
+Γä╣ todo 0
+Γä╣ duration_ms 58183.960086
+--- EXIT CODE: 0 ---
+
+==================== Phase 2: CLI walkthrough ====================
+{"ready":true}
+{"decision":"allow","body":"secret"}
+{}
+{"decision":"deny"}
+KEYS /tmp/opkeys/audit-signing.key /tmp/opkeys/audit-signing.pub
+CHECKPOINT seq=5 id=a7ef048197e2f18c966c39ee74bb5713
+OK 5 c3d273e59327aa1bab4fdb95c68f5ff446ac26b9bac417fa700d79da38ace8a8
+#5 2026-11-26T17:14:05.624Z medium  A-REVOKED-RETRY actor="alice" asset="brief" request="r2" : "revoked or disabled actor attempted access"
+--- EXIT CODE: 0 ---
+
+==================== Phase 5: kig detect (practice) ====================
+kig detect: 22 events (0 rejected), 2 alert(s), 0 notice(s); baseline documented (7 edges); window 60 s; lateness 5 s
+
+alert-001  PRIV-1  high  unexpected_privilege_change
+  identity : user-blair   session: sess-blair   flow: flow-004
+  window   : 2026-01-15T09:03:05.000Z .. 2026-01-15T09:03:06.000Z
+  path     : admin-console->identity, portal->reports
+  events   : evt-008 (success), evt-009 (allow)
+  reason   : PRIV-1: role increase viewer -> operator for user-blair has no matching approval: no approval is referenced by the event. The records show the change succeeded; they do not show why. Linked later allowed access in the same session/flow (PRIV-2): evt-009 (allow).
+  tta      : 4800 ms (simulated collector clock, includes the reorder wait)
+
+alert-002  LM-1  medium  candidate_lateral_movement
+  identity : svc-report-worker   session: sess-worker   flow: flow-005
+  window   : 2026-01-15T09:04:00.000Z .. 2026-01-15T09:04:03.000Z
+  path     : reports->billing, billing->archive, archive->identity
+  events   : evt-010 (deny), evt-011 (deny), evt-012 (deny)
+  also     : LM-3
+  reason   : LM-1: 3 previously unseen service edges for svc-report-worker (session sess-worker, flow flow-005) within 60 s: reports->billing [evt-010: deny], billing->archive [evt-011: deny], archive->identity [evt-012: deny]. Candidate lateral movement; all requests were denied, so no access succeeded.
+  tta      : 4900 ms (simulated collector clock, includes the reorder wait)
+
+timeline (event-time order; ingest index, raw and received times kept)
+  ingest  event_id      corrected (UTC)           received (UTC)            offset   delay  flags  classification
+       0  evt-001       2026-01-15T09:00:00.000Z  2026-01-15T09:00:00.200Z       0    200  -      routine
+       1  evt-002       2026-01-15T09:00:02.000Z  2026-01-15T09:00:02.300Z       0    300  -      routine
+       2  evt-003       2026-01-15T09:01:00.000Z  2026-01-15T09:01:00.100Z       0    100  -      approved_change
+       3  evt-004       2026-01-15T09:01:05.000Z  2026-01-15T09:01:05.200Z       0    200  -      approved_change
+       4  evt-005       2026-01-15T09:01:06.000Z  2026-01-15T09:01:06.100Z       0    100  -      routine
+       5  evt-006       2026-01-15T09:02:00.000Z  2026-01-15T09:02:00.200Z       0    200  -      routine
+       6  evt-007       2026-01-15T09:03:00.000Z  2026-01-15T09:03:00.300Z       0    300  -      routine
+       7  evt-008       2026-01-15T09:03:05.000Z  2026-01-15T09:03:05.200Z       0    200  -      alert:alert-001
+       8  evt-009       2026-01-15T09:03:06.000Z  2026-01-15T09:03:06.200Z       0    200  -      alert:alert-001
+       9  evt-010       2026-01-15T09:04:00.000Z  2026-01-15T09:04:00.100Z       0    100  -      alert:alert-002
+      10  evt-011       2026-01-15T09:04:02.000Z  2026-01-15T09:04:02.100Z       0    100  -      alert:alert-002
+      11  evt-012       2026-01-15T09:04:03.000Z  2026-01-15T09:04:03.100Z       0    100  -      alert:alert-002
+      13  evt-013       2026-01-15T09:05:01.000Z  2026-01-15T09:05:04.200Z       0   3200  -      routine
+      12  evt-014       2026-01-15T09:05:02.000Z  2026-01-15T09:05:02.200Z       0    200  -      routine
+      14  evt-015       2026-01-15T09:06:01.000Z  2026-01-15T09:06:01.200Z    2000    200  -      routine
+      15  evt-016       2026-01-15T09:07:00.000Z  2026-01-15T09:07:00.100Z       0    100  -      approved_change
+      16  evt-017       2026-01-15T09:07:02.000Z  2026-01-15T09:07:02.100Z       0    100  -      expected_enforcement
+      17  evt-018       2026-01-15T09:07:03.000Z  2026-01-15T09:07:03.100Z       0    100  -      expected_enforcement
+      18  evt-019       2026-01-15T09:08:00.000Z  2026-01-15T09:08:00.200Z       0    200  -      routine
+      19  evt-020       2026-01-15T09:08:02.000Z  2026-01-15T09:08:02.200Z       0    200  -      routine
+      20  evt-021       2026-01-15T09:09:00.000Z  2026-01-15T09:09:00.100Z       0    100  -      routine
+      21  evt-022       2026-01-15T09:10:00.000Z  2026-01-15T09:10:00.200Z       0    200  -      routine
+  flags: L late (arrived below the watermark), C clock offset unsupported (ordered by receipt), U order uncertain
+--- EXIT CODE: 0 ---
+
+==================== Phase 5: kig bench detect ====================
+kig bench detect (synthetic data; baseline documented+warmup, 10 edges, warm-up seed 1)
+HELD-OUT seeds 201,202,203,204,205: 6784 events (6516 benign, 268 attack), 105 incidents, 85 alerts
+  incident level : precision 1.000  recall 0.810  F1 0.895  (recall on detectable 1.000; 20 evasive incidents included)
+  event level    : precision 1.000  recall 0.813  F1 0.897
+  median time-to-alert 4810 ms (max 5000 ms; includes the reorder-buffer wait)
+  false alerts per 1,000 benign events: 0.00
+  missed: 0 detectable, 20 evasive
+    unapproved_escalation:no_approval                10/10
+    unapproved_escalation:other_subject_approval     5/5
+    unapproved_escalation:wrong_role_approval        5/5
+    expired_approval                                 10/10
+    chain_3_edges_denied                             20/20
+    one_edge_allowed_sensitive                       10/10
+    two_edge_allowed                                 10/10
+    deny_burst_2_targets                             15/15
+    low_and_slow_3_edges                             0/10
+    two_edge_denied                                  0/10
+  clock: 1333 skewed in range, 216 out of range, 914 delayed 1-4 s, 159 delayed > 5 s, 147 late, 228 reordered
+tuning   seeds 101,102,103: 4103 events (3942 benign, 161 attack), 63 incidents, 51 alerts
+  incident level : precision 1.000  recall 0.810  F1 0.895  (recall on detectable 1.000; 12 evasive incidents included)
+  event level    : precision 1.000  recall 0.814  F1 0.897
+  median time-to-alert 4854 ms (max 5000 ms; includes the reorder-buffer wait)
+  false alerts per 1,000 benign events: 0.00
+  missed: 0 detectable, 12 evasive
+    unapproved_escalation:no_approval                6/6
+    unapproved_escalation:other_subject_approval     3/3
+    unapproved_escalation:wrong_role_approval        3/3
+    expired_approval                                 6/6
+    chain_3_edges_denied                             12/12
+    one_edge_allowed_sensitive                       6/6
+    two_edge_allowed                                 6/6
+    deny_burst_2_targets                             9/9
+    low_and_slow_3_edges                             0/6
+    two_edge_denied                                  0/6
+  clock: 738 skewed in range, 212 out of range, 513 delayed 1-4 s, 92 delayed > 5 s, 87 late, 141 reordered
+report not saved (ENOENT): /app/evidence/detect-2026-11-26T17-14-18-217Z.json is not writable here (read-only filesystem?)
+--- EXIT CODE: 0 ---

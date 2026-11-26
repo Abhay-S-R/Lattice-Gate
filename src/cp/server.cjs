@@ -6,6 +6,7 @@ const { openDb } = require('../store/db.cjs');
 const snapshots = require('./snapshot.cjs');
 const policyRoutes = require('./routes-policy.cjs');
 const revokeRoutes = require('./routes-revoke.cjs');
+const rotateRoutes = require('./routes-rotate.cjs');
 
 function start({ env = process.env } = {}) {
   const L = layout(kigHome(env));
@@ -15,6 +16,7 @@ function start({ env = process.env } = {}) {
     [ROUTES.cp.health, async () => ({ status: 200, json: { status: 'ok', service: 'cp', instance: env.KIG_INSTANCE_TOKEN || null } })],
     ...policyRoutes.routes(db, env),
     ...revokeRoutes.routes(db, env),
+    ...rotateRoutes.routes(db, env),
   ]);
   const server = serve(ports(env).cp, route);
   const stop = () => server.close();

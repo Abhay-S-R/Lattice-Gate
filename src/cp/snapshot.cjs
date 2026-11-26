@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const { tx } = require('../store/db.cjs');
 const { getMeta, setMeta } = require('../store/schema-base.cjs');
 const { layout, ports, url, NODE_IDS, SNAPSHOT } = require('../core/contracts.cjs');
+const ids = require('../core/ids.cjs');
 const { encode } = require('../core/encoding.cjs');
 const provider = require('../crypto/provider.cjs');
 const registry = require('./registry.cjs');
@@ -29,9 +30,15 @@ function buildSnapshot(cpDb) {
     epoch,
     issued_at_ms: Date.now(), lease_ms: SNAPSHOT.leaseMs,
     devices, revoked_devices: devices.filter((d) => d.status === 'revoked').map((d) => d.device_id),
-    files: registry.listFiles(cpDb).map((f) => ({ file_id: f.file_id, active_version: f.active_version, cutoff: null })),
+    files: registry.listFiles(cpDb).map((f) => ({ file_id: f.file_id, active_version: f.active_version, cutoff: cutoffFor(cpDb, f.file_id) })),
     grants: registry.listGrants(cpDb),
   };
+}
+
+/** Phase 4 cutoff for a file (§10.1): the latest committed rotation's old version, or null. */
+function cutoffFor(cpDb, fileId) {
+  const row = cpDb.prepare('SELECT old_version, from_epoch, grace_ms FROM file_cutoffs WHERE file_id=?').get(ids.enc(fileId));
+  return row ? { old_version: row.old_version, from_epoch: row.from_epoch, grace_ms: row.grace_ms } : null;
 }
 
 function signSnapshot(snapshot, privateKey) {
@@ -65,25 +72,45 @@ function recordAck(cpDb, ack, env = process.env, arrivedMonoNs = process.hrtime.
   return true;
 }
 
+function policyKey(env = process.env) {
+  return provider.importPrivate(fs.readFileSync(layout(require('../core/contracts.cjs').kigHome(env)).cp.keys.policy.key));
+}
+
+/**
+ * Build, sign and store the next snapshot and advance the epoch. Must run inside the caller's
+ * transaction (Phase 4 COMMIT: the epoch change commits together with the rotation, P4-D3).
+ */
+function commitInTx(cpDb, privateKey) {
+  if (!cpDb.isTransaction) throw new Error('commitInTx must run inside a transaction');
+  const snapshot = buildSnapshot(cpDb);
+  const signed = signSnapshot(snapshot, privateKey);
+  cpDb.prepare('INSERT INTO snapshots(epoch,body,sig,created_ms) VALUES(?,?,?,?)')
+    .run(snapshot.epoch, JSON.stringify(snapshot), signed.sig, Date.now());
+  setMeta(cpDb, 'epoch', snapshot.epoch);
+  return signed;
+}
+
+/** POST a signed snapshot to one node; resolves to the node's answer, rejects if unreachable. */
+function pushTo(id, signed, env = process.env, { timeoutMs } = {}) {
+  return call(`${url(ports(env)[id])}${POLICY_PUSH_PATH}`, 'POST', {
+    snapshot: signed.snapshot, sig: Buffer.isBuffer(signed.sig) ? signed.sig.toString('base64') : signed.sig,
+  }, timeoutMs ? { timeoutMs } : {});
+}
+
 function publish(cpDb, { env = process.env } = {}) {
-  const L = layout(require('../core/contracts.cjs').kigHome(env));
-  const privateKey = provider.importPrivate(fs.readFileSync(L.cp.keys.policy.key));
-  let signed;
-  tx(cpDb, () => {
-    const snapshot = buildSnapshot(cpDb);
-    signed = signSnapshot(snapshot, privateKey);
-    cpDb.prepare('INSERT INTO snapshots(epoch,body,sig,created_ms) VALUES(?,?,?,?)')
-      .run(snapshot.epoch, JSON.stringify(snapshot), signed.sig, Date.now());
-    setMeta(cpDb, 'epoch', snapshot.epoch);
-  });
-  const ps = ports(env);
-  for (const id of NODE_IDS) {
-    const node = url(ps[id]);
-    call(`${node}${POLICY_PUSH_PATH}`, 'POST', {
-      snapshot: signed.snapshot, sig: signed.sig.toString('base64'),
-    }).catch(() => {});
-  }
+  const privateKey = policyKey(env);
+  const signed = tx(cpDb, () => commitInTx(cpDb, privateKey));
+  for (const id of NODE_IDS) pushTo(id, signed, env).catch(() => {});
   return signed.snapshot.epoch;
 }
 
-module.exports = { buildSnapshot, signSnapshot, publish, latest, recordAck, signatureBytes };
+/** Highest epoch each node has acknowledged (Phase 4 DISTRIBUTE waits for every node ≥ E). */
+function ackedEpochs(cpDb) {
+  const out = Object.fromEntries(NODE_IDS.map((id) => [id, 0]));
+  for (const r of cpDb.prepare('SELECT node_id, max(epoch) AS e FROM node_acks GROUP BY node_id').all()) {
+    if (NODE_IDS.includes(r.node_id)) out[r.node_id] = Number(r.e);
+  }
+  return out;
+}
+
+module.exports = { buildSnapshot, signSnapshot, publish, latest, recordAck, signatureBytes, commitInTx, pushTo, policyKey, ackedEpochs, cutoffFor };

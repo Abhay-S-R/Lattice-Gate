@@ -8,6 +8,8 @@ const policyRoutes = require('./routes-policy.cjs');
 const authRoutes = require('./routes-auth.cjs');
 const fileRoutes = require('./routes-files.cjs');
 const controlRoutes = require('./routes-control.cjs');
+const transferRoutes = require('./routes-transfer.cjs');
+const transfers = require('./transfers.cjs');
 const alerts = require('./alerts.cjs');
 
 function start({ env = process.env } = {}) {
@@ -23,10 +25,15 @@ function start({ env = process.env } = {}) {
     ...authRoutes.routes(db).map(([name, handler]) => [name, alerts.wrap(db, id, handler)]),
     ...fileRoutes.routes(db).map(([name, handler]) => [name, alerts.wrap(db, id, handler)]),
     ...controlRoutes.routes(db, { env }),
+    ...transferRoutes.controlRoutes(db, { id, privateKey, cpPub }),
+    ...transferRoutes.deviceRoutes(db).map(([name, handler]) => [name, alerts.wrap(db, id, handler)]),
   ]);
   const server = serve(ports(env)[id], route);
   const stopPull = policyRoutes.startPullLoop(db, { id, env, cpPub });
-  server.once('close', () => { stopPull(); db.close(); });
+  // Retired versions leave this node once their node-local grace has ended (§12.1).
+  const purge = setInterval(() => { try { transfers.purgeRetired(db); } catch { /* retried next tick */ } }, 1000);
+  purge.unref();
+  server.once('close', () => { stopPull(); clearInterval(purge); db.close(); });
   const stop = () => server.close();
   process.once('SIGTERM', stop);
   process.once('SIGINT', stop);

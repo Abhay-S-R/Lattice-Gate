@@ -67,7 +67,7 @@ PolicySnapshot { epoch, issued_at_ms, lease_ms,
 ### C4. Registry read API (owner: B produces, A consumes)
 
 `cp/registry.cjs` exports, for A's `buildSnapshot`:
-`listDevices(cpDb) → [{ device_id, account, sign_pk, kem_pk, status }]`, `listGrants(cpDb)`, `listFiles(cpDb)`. Until B's 3.5 merges, A tests `buildSnapshot` against a tiny fixture that inserts rows into B's agreed tables (C5).
+`listDevices(cpDb) → [{ device_id, account, sign_pk, kem_pk, status }]`, `listGrants(cpDb)`, `listFiles(cpDb)`, and `getDevice(cpDb, deviceId)` for request authentication/enrolment lookups. Until B's 3.5 merges, A tests `buildSnapshot` against a tiny fixture that inserts rows into B's agreed tables (C5).
 
 ### C5. Table names (each owner adds only their own tables)
 
@@ -83,6 +83,7 @@ Schema files (`src/store/schema-cp.cjs`, `schema-node.cjs`, `schema-device.cjs`)
 
 - `core/http.cjs` (3.1): `serve(port, routes: Map<'METHOD /path', handler>)`, `call(url, method, json, { timeoutMs })`. JSON only, 1 MiB body cap, `Buffer`s as base64 fields.
 - Every decision endpoint answers **HTTP 200** with `{ decision: 'allow'|'deny', rule }` (plus payload on allow). Malformed requests → 400 `{ error }`. Never 500 with details; never stack traces.
+- Route strings are unique across the combined CP/node table in `contracts.ROUTES`; node-only routes use the `/v1/node/` prefix where a CP route would otherwise collide.
 - **Route registration without shared edits:** `node/server.cjs` and `cp/server.cjs` (A) build their route map from a fixed list of modules: `node/routes-policy.cjs` (A), `node/routes-auth.cjs` and `node/routes-files.cjs` (B); likewise for the CP. Each module exports `[[ 'METHOD /path', handler ], …]`. Adding B's module to the list is a one-line change agreed in the kick-off.
 
 ### C7. Signed request transcript (owner: B, read by A's revocation probes)
@@ -102,6 +103,8 @@ New commands are modules with the Phase 2 shape `{ name, describe, usage, option
 ### C9. Test helpers (owner: A, used by both)
 
 `tests/helpers/kig-home.cjs`: `freshHome() → dir` (temp `KIG_HOME`), `startCluster(home, { nodes: ['A','B','C'] }) → { cpUrl, nodeUrls, stop() }`. Clusters are always stopped in `after()`; tests use random free ports (`KIG_PORT_BASE`), never the fixed defaults, so suites can run in parallel.
+
+The helper's public names and result shape are declared by the `ClusterTestHelpers` JSDoc typedef and `TEST_HELPERS` constant in `src/core/contracts.cjs`. The helper implementation is part of A's 3.3 work, not M0.
 
 ---
 

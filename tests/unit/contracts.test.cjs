@@ -132,6 +132,10 @@ test('C8 CLI command ownership: no name claimed twice', () => {
   assert.ok(c.COMMANDS.A.includes('up') && c.COMMANDS.B.includes('init'));
 });
 
+test('C9 shared cluster test helper API is pinned', () => {
+  assert.deepEqual([...c.TEST_HELPERS], ['freshHome', 'startCluster']);
+});
+
 test('device status values and signing contexts exist in the provider', () => {
   assert.deepEqual([...c.DEVICE_STATUS], ['pending', 'active', 'revoked']);
   for (const ctx of [c.SNAPSHOT.context, c.REQUEST.context, c.ENROL.context]) {

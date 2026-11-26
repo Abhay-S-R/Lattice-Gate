@@ -41,3 +41,34 @@ jobs:
             evidence/
             evidence-ci.txt
           if-no-files-found: ignore
+
+  judging-replica:
+    # Same checks under the judging conditions the organizers described:
+    # linux/arm64 (native here, no emulation), Node 24.11.1, read-only root,
+    # no network, non-root user, writable /tmp only (scripts/judge.cjs).
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 25
+    env:
+      TOOLKIT_DIR: toolkit
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Organizer toolkit (pinned)
+        uses: actions/checkout@v4
+        with:
+          repository: ScalerOpenSourceLabs/Track-4-Toolkit
+          ref: 8901dfbdbfe048853e0bfa25b60583d1e6617a63
+          path: toolkit
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.11.1
+
+      - name: kig compat (replica)
+        run: node scripts/judge.cjs node kig.cjs compat
+
+      - name: Tests (replica)
+        run: node scripts/judge.cjs npm test
+
+      - name: Toolkit validator (replica)
+        run: node scripts/judge.cjs node scripts/validate.cjs

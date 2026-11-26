@@ -36,8 +36,8 @@ The current hosted judging-replica job ran linux/amd64, Node 24.11.1, Python 3.1
 
 | Check | Result | Evidence |
 | --- | --- | --- |
-| Toolkit validator, emulated ARM64 replica | PASS, `Local scenario passed.` | `evidence/superseded-arm64-validate.txt`, `evidence/validate-17f601d.txt` (local) |
-| Test suite, emulated ARM64 replica | PASS, 216 passed, 0 failed, 1 skipped (interop; `pqcrypto` not yet in that image), about 16 minutes under emulation | `evidence/superseded-arm64-npm-test-summary.txt` |
+| Toolkit validator, emulated ARM64 replica | PASS, `Local scenario passed.` | `evidence/superseded/superseded-arm64-validate.txt`, `evidence/validate-17f601d.txt` (local) |
+| Test suite, emulated ARM64 replica | PASS, 216 passed, 0 failed, 1 skipped (interop; `pqcrypto` not yet in that image), about 16 minutes under emulation | `evidence/superseded/superseded-arm64-npm-test-summary.txt` |
 | Interop, ARM64 replica | PASS, `interop 25/25` | Command: `npm run judge -- node --test tests/interop/interop.test.cjs` (result confirmed in the project chat) |
 | ARM64 GitHub Actions CI | PASS, reported by a teammate; run URL not captured | n/a |
 

@@ -1,6 +1,6 @@
 # Phase 4 evidence: rotation, lost-device re-key, crash recovery, backups (Gate 4)
 
-Code under test: commit `83f2294` (branch `phase-4-rotation`, merged with `main` incl. Phase 6 messaging, with D12 revised to add tables in place). Earlier passing runs of the same checks: `6984769` (Phase 4 alone) and `cca2fa5` (after the merge, before the D12 revision); their logs are kept as `*-6984769.txt` and `*-cca2fa5.txt`. Every command below ran inside the judging-container replica (`node scripts/judge.cjs …`): linux/amd64 (x86-64, native), Node.js v24.11.1, OpenSSL 3.5.4, SQLite 3.50.4, read-only root, no network, writable `/tmp` only. Plan and design decisions: [`docs/plans/phase-4.md`](../docs/plans/phase-4.md).
+Code under test: commit `83f2294` (branch `phase-4-rotation`, merged with `main` incl. Phase 6 messaging, with D12 revised to add tables in place). Earlier passing runs of the same checks: `6984769` (Phase 4 alone) and `cca2fa5` (after the merge, before the D12 revision); their logs are kept in [`superseded/`](superseded/) as `*-6984769.txt` and `*-cca2fa5.txt`. Every command below ran inside the judging-container replica (`node scripts/judge.cjs …`): linux/amd64 (x86-64, native), Node.js v24.11.1, OpenSSL 3.5.4, SQLite 3.50.4, read-only root, no network, writable `/tmp` only. Plan and design decisions: [`docs/plans/phase-4.md`](../docs/plans/phase-4.md).
 
 Specs: features P1-03 (re-key half), P1-04, P1-06, P1-07, D-06, D-07; architecture §11–§13, §17.2.
 

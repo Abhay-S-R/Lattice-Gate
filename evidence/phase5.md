@@ -2,7 +2,7 @@
 
 Code under test: commit `36d68b6` (branch `phase-5-detector`, merged with `main` after the platform correction). Every command below ran inside the judging-container replica (`node scripts/judge.cjs …`): linux/amd64 (x86-64, native on an x86-64 host), Node.js v24.11.1, read-only root, no network, toolkit at `/toolkit`. The time-to-alert figures come from the simulated collector clock and do not depend on host speed; no other timing in this file is a performance claim.
 
-> **Platform correction (2026-11-26).** The judging container is x86-64, not ARM64 (see `evidence/round1.md`). This evidence was first captured at commit `7223592` in an emulated linux/arm64 replica and has been re-run on x86-64. All results are identical: same test counts, byte-identical practice output, and the same benchmark metrics. Only the measured per-event processing time differs, by under 1 ms, because the first run was emulated. The ARM64 captures are kept as `superseded-arm64-*` files (§5).
+> **Platform correction (2026-11-26).** The judging container is x86-64, not ARM64 (see `evidence/round1.md`). This evidence was first captured at commit `7223592` in an emulated linux/arm64 replica and has been re-run on x86-64. All results are identical: same test counts, byte-identical practice output, and the same benchmark metrics. Only the measured per-event processing time differs, by under 1 ms, because the first run was emulated. The ARM64 captures are kept in [`superseded/`](superseded/) (§5).
 
 Specs: features P1-09, P1-10, P1-11, P1-18, D-09; architecture §15; plan `docs/plans/phase-5.md`.
 
@@ -99,7 +99,7 @@ Tuning seeds 101–103 give the same picture: precision 1.000, recall 0.810, F1 
 
 Commit `7223592`, emulated linux/arm64 replica. Same results as above. Superseded because the judging target is x86-64.
 
-- [`superseded-arm64-detect-7223592.json`](superseded-arm64-detect-7223592.json): benchmark report (`"arch": "arm64"`)
-- [`superseded-arm64-detect-bench-7223592.txt`](superseded-arm64-detect-bench-7223592.txt): benchmark console output
-- [`superseded-arm64-detect-practice-7223592.txt`](superseded-arm64-detect-practice-7223592.txt): practice-set output
+- [`superseded/superseded-arm64-detect-7223592.json`](superseded/superseded-arm64-detect-7223592.json): benchmark report (`"arch": "arm64"`)
+- [`superseded/superseded-arm64-detect-bench-7223592.txt`](superseded/superseded-arm64-detect-bench-7223592.txt): benchmark console output
+- [`superseded/superseded-arm64-detect-practice-7223592.txt`](superseded/superseded-arm64-detect-practice-7223592.txt): practice-set output
 - Detector suite: 86 tests, 86 pass. Full `npm test` (plain x86-64 Node image without `pqcrypto`): 302 tests, 301 pass, 1 skipped (interop).

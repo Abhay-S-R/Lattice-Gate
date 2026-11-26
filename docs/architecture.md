@@ -43,7 +43,7 @@ The hackathon judges us twice, through two different entry points (D-17):
 
 | | **Round 1: automated** | **Round 2: judges** |
 |---|---|---|
-| Who runs it | Organizer's worker, in an offline **ARM64** Linux container | Us, in front of the judges |
+| Who runs it | Organizer's worker, in an offline **x86-64** Linux container | Us, in front of the judges |
 | Entry point | `track4_service.cjs` at the repo root | `kig` CLI (`node kig.cjs …`) |
 | What it exercises | 5 operations: `setup`, `read`, `revoke`, `audit`, `protected_read`, plus hidden tests and exploits | All 12 track goals: devices, 3 nodes, rotation, revocation, crash recovery, backups, audit verification, detection, messaging |
 | How a request arrives | One JSON object on stdin, **one process per request** | CLI commands; long-running node processes on localhost |
@@ -90,7 +90,7 @@ All of this exists to tell one story (features §1.2): *an owner shares a protec
 
 1. **Deny by default.** Missing, corrupt, stale or unverifiable state never produces `allow`.
 2. **Commit before acknowledging.** A decision and the audit event that records it are written in one SQLite transaction, and only then is the response sent.
-3. **Zero runtime dependencies.** Only Node 24.11.1 built-ins. Nothing to install, nothing to compile on ARM.
+3. **Zero runtime dependencies.** Only Node 24.11.1 built-ins. Nothing to install, nothing to compile.
 4. **One crypto module.** Only `src/crypto/provider.cjs` touches `node:crypto`.
 5. **Identifiers are opaque.** Every client-supplied string is stored JSON-encoded (D-04) and never used as a path, SQL fragment, object key or log delimiter.
 6. **Honest limits.** Anything we do not defend is written in the threat model (§19).
@@ -103,7 +103,7 @@ All of this exists to tell one story (features §1.2): *an owner shares a protec
 
 | Layer | Choice | Notes |
 |---|---|---|
-| Runtime | **Node.js 24.11.1**, `linux-arm64` in judging | Bundles OpenSSL 3.5.4 (PQC support) and SQLite 3.50.4. Version pinned by organizers. Node 24.1.x would **not** work (OpenSSL 3.0, no ML-KEM/ML-DSA). |
+| Runtime | **Node.js 24.11.1**, `linux-x64` in judging | Bundles OpenSSL 3.5.4 (PQC support) and SQLite 3.50.4. Version pinned by organizers. Node 24.1.x would **not** work (OpenSSL 3.0, no ML-KEM/ML-DSA). |
 | Module system | CommonJS (`.cjs`), no build step, no TypeScript compile | `// @ts-check` + JSDoc for editor type hints only |
 | npm dependencies | **None** | `package.json` exists only for `scripts` and `engines`, with no `dependencies` |
 | Language features | Plain JavaScript; `Map`/`Set` for anything keyed by client input | Never index plain objects with client strings (P0-05) |
@@ -142,8 +142,8 @@ Algorithm and size reference (measured):
 |---|---|
 | Python 3.12 + `pqcrypto==0.4.0` | Cross-implementation test: a second, independent ML-KEM decapsulates our `protected_read` output (what the organizer's worker does). Skipped with a visible notice if absent. |
 | Toolkit `validate.py` | Official local check of the adapter contract |
-| Docker (`node:24.11.1` image, `--platform linux/arm64`) | Rehearse the judging container: read-only root, offline, writable temp |
-| GitHub Actions on **`ubuntu-24.04-arm`** | Native ARM64 CI: compat, tests, validator, performance numbers |
+| Docker (`tools/judge/Dockerfile`, `--platform linux/amd64`, Node 24.11.1 + Python 3.12) | Rehearse the judging container: read-only root, offline, non-root, writable temp (`npm run judge -- <cmd>`) |
+| GitHub Actions on **`ubuntu-24.04`** (x86-64) | CI: compat, tests, validator, plain and inside the judging replica |
 | pandoc or Typst | 2-page brief PDF |
 | OBS + unlisted YouTube | 5-minute fallback video |
 
@@ -151,7 +151,7 @@ Algorithm and size reference (measured):
 
 | Not used | Reason |
 |---|---|
-| Any npm package (express, sqlite3, better-sqlite3, jest, …) | Nothing may be installed during judging; native modules would also need ARM builds |
+| Any npm package (express, sqlite3, better-sqlite3, jest, …) | Nothing may be installed during judging; native modules would also need builds for the judging platform |
 | A custom cipher, MAC, KEM or signature | Disqualifying ("custom cryptographic primitive") |
 | Any ML/AI library | Disqualifying in the product |
 | Redis/PostgreSQL/message brokers | External services; SQLite is enough |
@@ -484,7 +484,7 @@ Alerts never change the response, never print anything and never lock anyone out
 
 ### 5.8 Performance profile
 
-Each request costs Node startup plus module loading plus one SQLite transaction. Measured on x86-64 (WSL): ~45 ms for an empty Node process, ~55 ms with SQLite and ML-KEM loaded. This is under 1% of the 8 s budget. ARM numbers are measured in CI (§18). To keep startup low, the adapter loads only `src/adapter`, `src/core`, `src/crypto`, `src/store`; the CLI-only modules are never `require`d on this path.
+Each request costs Node startup plus module loading plus one SQLite transaction. Measured on x86-64 (WSL): ~45 ms for an empty Node process, ~55 ms with SQLite and ML-KEM loaded. This is under 1% of the 8 s budget. Final numbers are measured in the x86-64 replica and CI (§18). To keep startup low, the adapter loads only `src/adapter`, `src/core`, `src/crypto`, `src/store`; the CLI-only modules are never `require`d on this path.
 
 ---
 
@@ -952,7 +952,7 @@ sequenceDiagram
 | Interop | `pqcrypto` decapsulates our `protected_read` output; proof matches (25 runs, UTF-8 bodies) | `tests/interop` (Python, dev-only) |
 | Detector | Practice set regression (expected alerts and non-alerts from features P1-09/P1-10) plus held-out seeds | `tests/unit/detect`, `kig bench detect` |
 
-**CI** (GitHub Actions, `ubuntu-24.04-arm`, container `node:24.11.1`): `kig compat` → `node --test` → `validate.py` against the root adapter (output saved to `evidence/validate-<commit>.txt`) → interop → `kig bench` (ARM numbers for the brief).
+**CI** (GitHub Actions, `ubuntu-24.04` x86-64; job `x64` in container `node:24.11.1`, job `judging-replica` inside `scripts/judge.cjs`): `kig compat` → `node --test` → `validate.py` against the root adapter (output saved to `evidence/validate-<commit>.txt`) → interop → `kig bench` (ARM numbers for the brief).
 
 **Evidence:** `evidence/` holds the toolkit evidence sheet (one row per goal; status `measured`, `partial`, `not tested` or `not supported`). Each row names the command, the expected result written before the run, the actual result, the environment and its limits.
 
@@ -978,13 +978,13 @@ These are used by the design but have **not** been measured yet:
 
 | # | Item | Fallback if it fails |
 |---|---|---|
-| V1 | Everything in features Appendix A, re-run on **ARM64** | Investigate before writing more code |
+| V1 | Everything in features Appendix A, re-run in the x86-64 judging replica | Investigate before writing more code |
 | V2 | Importing ML-DSA/ML-KEM private keys from PKCS#8 (`crypto.createPrivateKey({key, format:'der', type:'pkcs8'})`) round-trips with sign/decapsulate | `subtle.importKey('raw-seed', …)` |
 | V3 | `subtle.encapsulateBits` result works with `KeyObject.from(cryptoKey)` + `crypto.encapsulate` (only needed if we mix the two APIs) | Use WebCrypto only on the `protected_read` path (already verified) |
 | V4 | `VACUUM INTO` works through `node:sqlite` | `sqlite3_backup` isn't exposed, so copy under `BEGIN IMMEDIATE` on a checkpointed WAL DB |
 | V5 | Stdin read loop handles `EAGAIN` when the worker's pipe is non-blocking | Toolkit's `fs.readFileSync(0)` plus a post-read size check |
 | V6 | Adapter under a read-only root with only the temp dir writable (Docker `--read-only --tmpfs /tmp`) | Fix any write outside the state dir |
-| V7 | Worst-case adapter latency on ARM with a 4 MiB `setup` | Lower the caps |
+| V7 | Worst-case adapter latency in the replica with a 4 MiB `setup` | Lower the caps |
 
 ---
 

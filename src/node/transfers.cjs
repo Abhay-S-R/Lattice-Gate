@@ -92,6 +92,7 @@ function start(db, req) {
   const result = auth.authenticate(db, req);
   if (!result.ok) return { decision: 'deny', rule: result.rule };
   const snap = policy.current(db).snapshot;
+  if (!snap) return { decision: 'deny', rule: RULES.leaseExpired };
   if (!(snap.grants || []).some((g) => g.file_id === req.resource && g.account === result.device.account)) return { decision: 'deny', rule: RULES.notGranted };
   const file = ids.enc(req.resource);
   const row = db.prepare('SELECT c.nonce, c.ciphertext, e.envelope FROM ciphertexts c JOIN node_envelopes e ON e.file_id=c.file_id AND e.version=c.version WHERE c.file_id=? AND c.version=? AND e.device_id=?')
@@ -126,7 +127,7 @@ function chunk(db, body) {
       !/^[0-9a-f]{64}$/.test(body.transfer_id) || !Number.isSafeInteger(body.index) || body.index < 0) return null;
   const t = db.prepare('SELECT * FROM transfers WHERE transfer_id=?').get(body.transfer_id);
   if (!t) return { decision: 'deny', rule: RULES.transferUnknown };
-  if (t.state !== 'open') return { decision: 'deny', rule: RULES.transferTerminated };
+  if (t.state !== 'open') return { decision: 'deny', rule: RULES.transferTerminated, reason: t.reason };
   if (body.index >= t.chunk_count) return null;
   const now = mono();
   if (now - BigInt(t.created_mono_ns) > BigInt(ROTATION.transferTtlMs) * 1_000_000n) return terminate(db, t, RULES.transferExpired);

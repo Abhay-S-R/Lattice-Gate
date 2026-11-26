@@ -285,20 +285,25 @@ async function rotate(db, fileId, { env = process.env, graceMs = ROTATION.graceM
     await abort(db, rot, reason, env);
     return summary(rot, { status: 'aborted', reason });
   }
-  tx(db, () => journal(db, rot, 'STAGE'));
-  const policyPriv = snapshots.policyKey(env);
-  const staged = await stageAll(db, rot, env, policyPriv);
-  if (staged.missing.length) {
-    await abort(db, rot, staged.reason, env);
-    return summary(rot, { status: 'aborted', reason: staged.reason, nodes: staged.missing });
-  }
-  crashPoint(env, 'after_stage');
-  crashPoint(env, 'before_commit');
   let epoch;
-  try { epoch = commit(db, rot, graceMs, policyPriv); } catch (e) {
+  try {
+    tx(db, () => journal(db, rot, 'STAGE'));
+    const policyPriv = snapshots.policyKey(env);
+    const staged = await stageAll(db, rot, env, policyPriv);
+    if (staged.missing.length) {
+      await abort(db, rot, staged.reason, env);
+      return summary(rot, { status: 'aborted', reason: staged.reason, nodes: staged.missing });
+    }
+    crashPoint(env, 'after_stage');
+    crashPoint(env, 'before_commit');
+    epoch = commit(db, rot, graceMs, policyPriv);
+  } catch (e) {
+    // Nothing is committed (COMMIT is one transaction), so any failure up to here aborts now rather
+    // than leaving the file blocked as 'rotation_in_progress' until the next CP restart.
+    const reason = e instanceof RotationError ? e.code : 'internal_error';
+    await abort(db, rot, reason, env);
     if (!(e instanceof RotationError)) throw e;
-    await abort(db, rot, e.code, env);
-    return summary(rot, { status: 'aborted', reason: e.code });
+    return summary(rot, { status: 'aborted', reason });
   }
   crashPoint(env, 'after_commit');
   return finish(db, rot, epoch, env);

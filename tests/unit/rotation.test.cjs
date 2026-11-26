@@ -125,8 +125,11 @@ test('rotation: in-flight transfer finishes in grace, old version refused on eve
 
   // After the grace window the in-flight transfer is terminated, then stays terminated.
   await pause(graceMs - (Date.now() - committedAt) + 300);
-  assert.equal((await chunk(ctx, 'A', inflight.transfer_id, 0)).rule, 'grace_expired');
-  assert.equal((await chunk(ctx, 'A', inflight.transfer_id, 0)).rule, 'transfer_terminated');
+  // Ended either by this request or by the node's 1 s purge, whichever came first; the reason is the same.
+  const ended = await chunk(ctx, 'A', inflight.transfer_id, 0);
+  assert.equal(ended.decision, 'deny');
+  assert.equal(ended.rule === 'grace_expired' ? 'grace_expired' : ended.reason, 'grace_expired', JSON.stringify(ended));
+  assert.deepEqual(await chunk(ctx, 'A', inflight.transfer_id, 0), { decision: 'deny', rule: 'transfer_terminated', reason: 'grace_expired' });
 
   // Nodes delete the retired ciphertext after grace; the CP keeps the custodian copy as 'retiring'.
   for (const id of NODE_IDS) {
@@ -209,7 +212,7 @@ test('rotation: concurrent rotation refused; stage and drop need the CP signatur
   assert.equal(live.decision, 'allow');
   ctx.ok(['revoke', '--device', 'alice-phone']);
   await until(async () => (await chunk(ctx, 'B', live.transfer_id, 0)).decision === 'deny', 'transfer ended by revocation');
-  assert.equal((await chunk(ctx, 'B', live.transfer_id, 0)).rule, 'transfer_terminated');
+  assert.deepEqual(await chunk(ctx, 'B', live.transfer_id, 0), { decision: 'deny', rule: 'transfer_terminated', reason: 'device_revoked' });
   const nb = openReadOnly(layout(ctx.home).node('B').db);
   try { assert.equal(nb.prepare('SELECT reason FROM transfers WHERE transfer_id=?').get(live.transfer_id).reason, 'device_revoked'); } finally { nb.close(); }
 });

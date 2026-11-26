@@ -40,6 +40,8 @@ function publish(db, { file_id, owner_device, plaintext, home = contracts.kigHom
   let dek;
   try {
     if (typeof file_id !== 'string' || !Buffer.isBuffer(plaintext)) throw new TypeError('invalid file publish request');
+    // Phase 4 (P4-D9): every version must fit one signed stage message when it is rotated.
+    if (plaintext.length > contracts.ROTATION.maxFileBytes) throw new Error('file_too_large');
     const owner = registry.getDevice(db, owner_device);
     if (!owner || owner.status !== 'active') throw new Error('owner_device_inactive');
     dek = provider.random(32);

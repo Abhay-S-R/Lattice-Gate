@@ -10,6 +10,10 @@ jobs:
     runs-on: ubuntu-24.04
     container: node:24.11.1-bookworm
     timeout-minutes: 20
+    env:
+      # The toolkit is checked out inside the repo here (not at ../Track-4-Toolkit);
+      # every step that reads practice data or validate.py needs this (kig demo, tests, validator).
+      TOOLKIT_DIR: toolkit
     steps:
       - uses: actions/checkout@v4
 
@@ -30,7 +34,7 @@ jobs:
         run: npm test
 
       - name: Toolkit validator against root adapter
-        run: TOOLKIT_DIR=toolkit node scripts/validate.cjs
+        run: node scripts/validate.cjs
 
       - name: Upload evidence
         if: always()

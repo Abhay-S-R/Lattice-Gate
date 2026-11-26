@@ -79,11 +79,19 @@ function append(db, ev) {
 
 /**
  * Walk the whole chain from genesis.
- * @returns {{ ok: true, count: number, head: Buffer } |
+ * opts.collect: sequence numbers whose hash to return in `hashes` (seq 0 = genesis),
+ * used to compare against signed checkpoints (core/checkpoint.cjs).
+ * @param {import('node:sqlite').DatabaseSync} db
+ * @param {{ collect?: Iterable<number> }} [opts]
+ * @returns {{ ok: true, count: number, head: Buffer, hashes: Map<number, Buffer> } |
  *           { ok: false, seq: number, reason: 'content_edit'|'missing_or_reordered' }}
  */
-function verifyChain(db) {
+function verifyChain(db, opts = {}) {
+  const want = new Set(opts.collect || []);
+  /** @type {Map<number, Buffer>} */
+  const hashes = new Map();
   let prev = genesis(db);
+  if (want.has(0)) hashes.set(0, prev);
   let expected = 1;
   for (const row of db.prepare('SELECT * FROM audit_events ORDER BY seq').iterate()) {
     if (row.seq !== expected || !toBuf(row.prev_hash).equals(prev)) {
@@ -101,9 +109,10 @@ function verifyChain(db) {
     }
     if (!h.equals(toBuf(row.hash))) return { ok: false, seq: row.seq, reason: 'content_edit' };
     prev = h;
+    if (want.has(row.seq)) hashes.set(row.seq, h);
     expected++;
   }
-  return { ok: true, count: expected - 1, head: prev };
+  return { ok: true, count: expected - 1, head: prev, hashes };
 }
 
 /**

@@ -135,6 +135,8 @@ const exportPrivate = (key) => key.export({ format: 'der', type: 'pkcs8' });
 const importPrivate = (der) => crypto.createPrivateKey({ key: der, format: 'der', type: 'pkcs8' });
 const exportPublic = (key) => key.export({ format: 'der', type: 'spki' });
 const importPublic = (der) => crypto.createPublicKey({ key: der, format: 'der', type: 'spki' });
+/** Public key matching a private KeyObject (e.g. to pin it in an anchor). */
+const publicFromPrivate = (privateKey) => crypto.createPublicKey(privateKey);
 
 /** Known-answer and round-trip checks used by `kig compat`. */
 async function selfTest() {
@@ -183,6 +185,6 @@ module.exports = {
   CONTEXTS, KEM_PK_BYTES, InvalidKeyError, AeadError,
   random, sha256, hmac, hmacHex, hmacEqual, hkdf, aeadSeal, aeadOpen,
   kemEncapsulateRaw, kemGenerate, kemExportRawPublic, kemEncapsulate, kemDecapsulate,
-  sigGenerate, sign, verify, exportPrivate, importPrivate, exportPublic, importPublic,
+  sigGenerate, sign, verify, exportPrivate, importPrivate, exportPublic, importPublic, publicFromPrivate,
   selfTest,
 };

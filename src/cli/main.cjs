@@ -55,7 +55,7 @@ const bench = {
   },
 };
 
-for (const mod of [compat, require('./verify-log.cjs'), require('./keys.cjs'), require('./checkpoint.cjs'), require('./alerts.cjs'), detect, bench]) {
+for (const mod of [compat, require('./verify-log.cjs'), require('./keys.cjs'), require('./checkpoint.cjs'), require('./alerts.cjs'), require('./init.cjs'), require('./account.cjs'), require('./device.cjs'), require('./file.cjs'), require('./share.cjs'), detect, bench]) {
   COMMANDS.set(mod.name, mod);
 }
 

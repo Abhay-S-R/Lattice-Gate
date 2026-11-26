@@ -1,0 +1,16 @@
+{
+  "name": "key-identity-guard",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Key Identity Guard: post-quantum protected file access with revocation, audit and detection (DevForge Track 4)",
+  "license": "MIT",
+  "engines": {
+    "node": "24.11.1"
+  },
+  "scripts": {
+    "test": "node --test \"tests/**/*.test.cjs\"",
+    "compat": "node kig.cjs compat",
+    "validate": "sh scripts/validate.sh",
+    "judge": "sh scripts/judge.sh"
+  }
+}

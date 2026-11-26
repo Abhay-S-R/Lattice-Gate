@@ -285,13 +285,39 @@ test('clock-unsupported events are ordered by receipt and never advance the wate
   assert.deepEqual(buf.flush().map((e) => e.id), ['skewed', 'n1']);
 });
 
-test('released events carry a simulated collector release time (watermark wait)', () => {
+test('released events carry a simulated collector release time (watermark wait, at most the lateness)', () => {
   const [a, b] = evs([{ at: 0, rx: 100 }, { at: 7000, rx: 7100 }]);
   const buf = new ReorderBuffer();
   buf.push(a);
   const out = buf.push(b);
   assert.deepEqual(out, [a]);
-  assert.equal(a.releasedAtMs, b.receivedMs, 'released when the watermark passed, at that arrival');
+  assert.equal(a.releasedAtMs, a.correctedMs + 5000, 'its lateness timer fired before b arrived');
   buf.flush();
   assert.equal(b.releasedAtMs, b.correctedMs + 5000, 'flushed at its lateness deadline');
+
+  // released by event-time watermark before its own deadline: at that arrival
+  const [c, d] = evs([{ at: 0, rx: 100 }, { at: 5500, rx: 400 }]);
+  const buf2 = new ReorderBuffer();
+  buf2.push(c);
+  assert.deepEqual(buf2.push(d), [c]);
+  assert.equal(c.releasedAtMs, d.receivedMs, 'released at the arrival that moved the watermark past it');
+});
+
+test('a quiet stream still drains: the wait never exceeds the lateness', () => {
+  const [a, b] = evs([{ at: 0, rx: 200 }, { at: 60000, rx: 60200 }]);
+  const buf = new ReorderBuffer();
+  buf.push(a);
+  const out = buf.push(b);
+  assert.deepEqual(out, [a], 'released by its timer, not held until the next event');
+  assert.equal(a.releasedAtMs - a.receivedMs, 4800);
+  assert.equal(b.late, false);
+});
+
+test('an arrival older than the collector clock minus lateness is late', () => {
+  const [a, old] = evs([{ at: 10000, rx: 10100 }, { at: 3000, rx: 10200 }]);
+  const buf = new ReorderBuffer();
+  buf.push(a);
+  assert.deepEqual(buf.push(old), [old]);
+  assert.equal(old.late, true);
+  assert.equal(old.releasedAtMs, old.receivedMs);
 });

@@ -11,16 +11,16 @@
 
 All of these must pass locally **and** in `npm run judge -- …` (linux/amd64, read-only root, offline):
 
-- [ ] §17.2 demo steps 4–8 as one scripted test (`tests/e2e/phase4-demo.test.cjs`):
+- [x] §17.2 demo steps 4–8 as one scripted test (`tests/e2e/phase4-demo.test.cjs`):
   - 4: `brief` rotated while a transfer is in flight; the in-flight transfer finishes inside the grace window; a **new** request for the old version is rejected on **every** node; after 30 s the old transfer is terminated (`grace_expired`).
   - 5: `kig lost --device alice-phone` → every node denies it; per-node propagation latency printed.
   - 6: `alice-phone-2` enrols; before approval it is denied everywhere; approval by the revoked phone is refused; approval by `alice-laptop` works; `brief` was re-keyed; Bob and the replacement read the new version; the lost phone's old envelope cannot open it.
   - 7: CP crashed at `before_commit`, restarted: old version still active, revocation still in force, data readable, epoch not lower.
   - 8: backup; flipped byte → `digest_mismatch`; truncated → `digest_mismatch`; bad signature → `bad_signature`; old backup → `stale_backup`; live state byte-identical after each failure; good backup restores and the system works after restart.
-- [ ] `kig crash-test` passes at all 5 points (`after_prepare`, `after_stage`, `before_commit`, `after_commit`, `during_distribute`).
-- [ ] Unit/acceptance tests listed per task below.
-- [ ] Round 1 adapter untouched: `npm run validate` passes.
-- [ ] `evidence/phase4.md` written (commands, results, limits).
+- [x] `kig crash-test` passes at all 5 points (`after_prepare`, `after_stage`, `before_commit`, `after_commit`, `during_distribute`).
+- [x] Unit/acceptance tests listed per task below.
+- [x] Round 1 adapter untouched: `npm run validate` passes.
+- [x] `evidence/phase4.md` written (commands, results, limits).
 
 ---
 

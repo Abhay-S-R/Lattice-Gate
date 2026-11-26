@@ -10,6 +10,7 @@ const record = require('../messaging/record.cjs');
 const chunk = require('../messaging/chunk.cjs');
 const { TransportSim } = require('../messaging/transport-sim.cjs');
 const replay = require('../messaging/replay.cjs');
+const { encode } = require('../core/encoding.cjs');
 const { UsageError } = require('./main.cjs');
 
 const ROOT = path.resolve(__dirname, '..', '..');
@@ -30,6 +31,43 @@ function corruptBase64(value) {
   const bytes = Buffer.from(value, 'base64');
   bytes[0] ^= 1;
   return bytes.toString('base64');
+}
+function transcriptCandidateCannotOpen(m1, m2, packet) {
+  const th1 = Buffer.from(m2.th1, 'hex');
+  const kemCiphertext = Buffer.from(m2.ct, 'base64');
+  const nonceR = Buffer.from(m2.nonce_r, 'base64');
+  const th2 = provider.sha256(encode('kig/v1/handshake/m2', [th1, kemCiphertext, nonceR, m2.responder, m2.epoch]));
+  const candidate = provider.kemEncapsulate(provider.importPublic(Buffer.from(m1.ephemeral_pk, 'base64')));
+  const key = provider.hkdf(candidate.sharedKey, th2,
+    encode('kig/v1/traffic-key', [handshake.VERSION, handshake.SUITE, 'initiator-to-responder', m1.initiator, m1.responder]), 32);
+  const fields = {
+    sender_account: packet.sender_account, sender_device: packet.sender_device,
+    recipient_account: packet.recipient_account, recipient_device: packet.recipient_device,
+    epoch: packet.epoch, msg_id: packet.msg_id, seq: packet.seq,
+    chunk_idx: packet.chunk_idx, chunk_total: packet.chunk_total,
+  };
+  const aad = record.header({ sessionId: packet.session_id }, fields);
+  const iv = record.nonce('i2r', BigInt(packet.seq));
+  try {
+    requireOk(!candidate.ciphertext.equals(kemCiphertext), 'public encapsulation recreated the captured KEM ciphertext');
+    try {
+      const plaintext = provider.aeadOpen(key, iv, aad, Buffer.from(packet.ciphertext, 'base64'));
+      plaintext.fill(0);
+      return false;
+    } catch (error) {
+      if (error instanceof provider.AeadError) return true;
+      throw error;
+    }
+  } finally {
+    candidate.sharedKey.fill(0);
+    key.fill(0);
+    th1.fill(0);
+    kemCiphertext.fill(0);
+    nonceR.fill(0);
+    th2.fill(0);
+    aad.fill(0);
+    iv.fill(0);
+  }
 }
 
 async function demo(seed, io) {
@@ -94,6 +132,9 @@ async function demo(seed, io) {
 
     const shortRecord = record.seal(finished.session, Buffer.from('recipient-bound message'));
     requireThrows(() => record.open(responder.session, shortRecord, 'alice-phone'), 'wrong recipient was accepted');
+    const tamperedRecipient = { ...shortRecord, recipient_device: 'alice-phone' };
+    requireThrows(() => record.open(responder.session, tamperedRecipient), 'tampered recipient-device field was accepted');
+    pass(io, 'tampered recipient-device field is rejected');
     const changedAad = { ...shortRecord, msg_id: shortRecord.msg_id.replace(/^./, shortRecord.msg_id[0] === '0' ? '1' : '0') };
     requireThrows(() => record.open(responder.session, changedAad), 'altered record AAD was accepted');
     const received = record.open(responder.session, shortRecord);
@@ -142,15 +183,23 @@ async function demo(seed, io) {
     const capturedM1 = initiated.m1;
     const capturedM2 = responder.m2;
     const leakedSigningKey = alice.keys.signPrivate;
+    const leakedKeyProof = provider.sign(leakedSigningKey, provider.CONTEXTS.handshake, Buffer.from(capturedM2.th1, 'hex'));
+    requireOk(provider.verify(alice.keys.signPublic, provider.CONTEXTS.handshake, Buffer.from(capturedM2.th1, 'hex'), leakedKeyProof),
+      'compromised long-term signing key could not sign the captured transcript');
+    leakedKeyProof.fill(0);
     handshake.close(finished.session);
     handshake.close(responder.session);
     requireThrows(() => record.open(responder.session, shortRecord), 'record from a closed session was accepted');
     requireOk(!replay.isActive(home, 'bob-phone', responder.session.sessionId, 'alice-phone', responder.session.epoch),
       'closed session remains active in persistent replay state');
+    requireOk(initiated.state.ephemeralPrivate === null, 'initiator ephemeral KEM private key survived session close');
+    const trafficKeysCleared = [finished.session.sendKey, finished.session.receiveKey,
+      responder.session.sendKey, responder.session.receiveKey].every((key) => Buffer.isBuffer(key) && key.every((byte) => byte === 0));
+    requireOk(trafficKeysCleared, 'traffic keys survived session close');
+    requireOk(transcriptCandidateCannotOpen(capturedM1, capturedM2, shortRecord),
+      'captured transcript and exposed signing key recovered the closed-session ciphertext');
     requireOk(typeof capturedM1.ephemeral_pk === 'string' && typeof capturedM2.ct === 'string', 'handshake transcript was not captured');
-    requireThrows(() => provider.kemDecapsulate(leakedSigningKey, Buffer.from(capturedM2.ct, 'base64')),
-      'long-term signing key unexpectedly decapsulated the captured ephemeral ciphertext');
-    pass(io, 'closed-session replay rejected; later signing-key exposure cannot recover ephemeral traffic keys');
+    pass(io, 'forward secrecy: recorded ciphertext remains unreadable after signing-key exposure and session close');
 
     const retiredSessionInit = handshake.initiate(alice, 'retired-phone');
     const retiredPending = handshake.respond(retired, retiredSessionInit.m1);

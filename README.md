@@ -14,7 +14,13 @@ Node.js **24.11.1**. Nothing else: there are no npm dependencies to install. *(F
 
 ## Round 2 CLI
 
-`node kig.cjs <command>`. Available now: `node kig.cjs compat` checks that this machine's Node supports everything the project needs. *(Full command list: Phase 2 onward.)*
+`node kig.cjs <command>` (`node kig.cjs help` lists them). Available now:
+
+- `node kig.cjs compat` checks that this machine's Node supports everything the project needs.
+- `node kig.cjs detect --events <events.csv|.jsonl> [--approvals <approvals.json>] [--baseline <baseline.json>] [--json]` runs the explainable detector (privilege changes without approval, lateral-movement candidates, clock-skew and reordering handling) and prints each alert with its reason, plus a timeline with raw, received and corrected times. Example: `node kig.cjs detect --events ../Track-4-Toolkit/practice/events.csv --approvals ../Track-4-Toolkit/practice/approvals.json`.
+- `node kig.cjs bench detect --seeds 101,102,103 --holdout 201-205` runs the seeded synthetic benchmark and prints held-out precision, recall, F1, median time-to-alert and false alerts per 1,000 benign events (results and limits: [`evidence/phase5.md`](evidence/phase5.md)).
+
+*(Full command list: Phase 2 onward.)*
 
 ## Development
 

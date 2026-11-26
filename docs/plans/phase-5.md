@@ -523,7 +523,23 @@ All commands must pass locally **and** inside `npm run judge -- ...` (ARM64, rea
 
 ---
 
-## 7. Quick Reference: Commit Sequence
+## 7. Implementation Notes (where the build differs from the text above)
+
+Recorded during implementation. Where the spec and this plan disagreed, the spec won, as §0 requires.
+
+1. **Watermark also advances with the collector clock.** §6 Task 5.1 defines `watermark = maxCorrectedMs − latenessMs` only. With that alone, an event waits until a newer event arrives; on the practice set, `evt-008` would wait for `evt-010`, 55 s later. Architecture §15.3 says TTA includes the watermark wait "up to 5 s", so the buffer also behaves like a lateness timer: effective watermark = `max(maxCorrected, latest receipt) − lateness`. Ordering is unchanged; an arrival older than `receipt − lateness` is `late`. Each released event carries `releasedAtMs`, its simulated collector release time.
+2. **Time-to-alert is per alert.** §6 Task 5.5 measures from `incident.last_event_received_ms`. For a PRIV incident that includes the follow-up reads, which arrive after the alert, so TTA would go negative. The spec says "from the receipt of the last needed event", so TTA = alert emission (simulated collector clock) − receipt of the last evidence event *that alert* needed, plus measured processing time per event. `last_event_received_ms` is still recorded on each incident.
+3. **PRIV-2 is a link, not a separate alert.** As the §2.5 trace and Task 5.4 test require ("exactly 2 alerts", PRIV-1 citing `evt-008` and `evt-009`), the follow-up access is added to the PRIV-1 alert's `event_ids` and `linked`, with `related_rules: ['PRIV-2']`.
+4. **Notices are not alerts.** An unapproved role decrease produces a low-severity `unrecorded_role_decrease` notice in `notices`, so it can never be counted as an alert or a false alert.
+5. **Unknown roles.** `rankOf` returns 0 for an unranked role, as specified, but a change *into* an unranked role is treated as an increase (and the alert says so). A change to an unknown role cannot be shown to be a decrease, and spec P1-09 requires unapproved increases to alert.
+6. **LM-2 groups per actor/session within the window**, like LM-1, so a two-edge allowed path is one alert rather than two (under one-to-one matching the second would otherwise count as a false alert).
+7. **Composite keys use `JSON.stringify([...])`, not `'\0'` joins** (§6 Task 5.2), because a `'\0'` join collides when a field itself contains NUL.
+8. **The generator returns approvals as `{ synthetic: true, changes }`** (the `approvals.json` shape `loadApprovals` takes), plus `csv`; its events go through `parseCsv`, so the benchmark exercises the real ingest.
+9. **Practice-set location.** Tests look in `TOOLKIT_DIR`, `/toolkit` (judge replica), `./toolkit` (CI checkout), `../Track-4-Toolkit` and `../track4-toolkit`, and fail loudly if none has the practice files.
+10. **`kig detect` exit codes:** 0 success; 2 for bad arguments or unreadable/invalid input (events, approvals or baseline). JSON output also escapes C1 controls, bidi overrides and line separators, which `JSON.stringify` leaves raw.
+11. **Gate commands on Windows:** run `node scripts/judge.cjs …` directly; `npm run judge -- node --test …` loses the `--test` flags to npm in PowerShell.
+
+## 8. Quick Reference: Commit Sequence
 
 1. `feat(detect): ingest, clock correction and reorder buffer`
 2. `feat(detect): approvals, role tracking and privilege rules`

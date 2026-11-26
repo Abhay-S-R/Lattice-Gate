@@ -122,8 +122,31 @@ async function revoke(ctx, req) {
 
 // ---------------------------------------------------------------- audit (A, Task 1.11)
 
-async function auditOp(ctx, req) { // eslint-disable-line no-unused-vars
-  throw new Error('not implemented');
+/**
+ * Latest access decision for request_id in the current generation (D-02); unknown → deny (D-03).
+ * No store yet → deny without creating anything. Other state errors propagate
+ * (index.cjs answers with the deny shape).
+ * @param {{ stateDir: string }} ctx
+ * @param {{ request_id: string }} req
+ * @returns {Promise<{ request_id: string, decision: 'allow'|'deny' }>}
+ */
+async function auditOp(ctx, req) {
+  let db;
+  try {
+    db = openAdapterDb(ctx.stateDir, false);
+  } catch (e) {
+    if (e instanceof StateError && e.kind === 'missing') return { request_id: req.request_id, decision: 'deny' };
+    throw e;
+  }
+  const found = using(db, () => tx(db, () => {
+    const gen = currentGen(db);
+    const decision = audit.latestAccessDecision(db, gen, req.request_id);
+    audit.append(db, {
+      gen, kind: 'audit_query', request_id: req.request_id, rule: decision ? 'hit' : 'audit_lookup_miss',
+    });
+    return decision;
+  }));
+  return { request_id: req.request_id, decision: found ?? 'deny' };
 }
 
 // ---------------------------------------------------------------- protected_read (B, Task 1.12)

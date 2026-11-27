@@ -1,0 +1,297 @@
+{
+  "generated_at": "2026-11-27T00:10:09.319Z",
+  "environment": {
+    "node": "v24.11.1",
+    "platform": "win32",
+    "arch": "x64",
+    "openssl": "3.5.4",
+    "sqlite": "3.50.4",
+    "cpu_model": "11th Gen Intel(R) Core(TM) i7-1165G7 @ 2.80GHz",
+    "cpu_cores": 8,
+    "total_mem_mib": 16127,
+    "in_judging_replica": false
+  },
+  "config": {
+    "runs": 3,
+    "in_process_runs": 12,
+    "large_input_runs": 3,
+    "seed": 2026,
+    "cluster": false
+  },
+  "results": {
+    "process_baseline": {
+      "empty_node": {
+        "n": 3,
+        "p50_ms": 69.323,
+        "p95_ms": 89.642,
+        "max_ms": 89.642,
+        "mean_ms": 75.453
+      }
+    },
+    "adapter_whole_process": {
+      "setup_small": {
+        "n": 3,
+        "p50_ms": 113.863,
+        "p95_ms": 119.237,
+        "max_ms": 119.237,
+        "mean_ms": 114.2
+      },
+      "read_allow": {
+        "n": 3,
+        "p50_ms": 106.378,
+        "p95_ms": 110.213,
+        "max_ms": 110.213,
+        "mean_ms": 107.597
+      },
+      "read_deny": {
+        "n": 3,
+        "p50_ms": 103.807,
+        "p95_ms": 108.29,
+        "max_ms": 108.29,
+        "mean_ms": 104.28
+      },
+      "revoke": {
+        "n": 3,
+        "p50_ms": 105.29,
+        "p95_ms": 109.291,
+        "max_ms": 109.291,
+        "mean_ms": 105.402
+      },
+      "audit_hit": {
+        "n": 3,
+        "p50_ms": 105.872,
+        "p95_ms": 105.981,
+        "max_ms": 105.981,
+        "mean_ms": 104.572
+      },
+      "audit_miss": {
+        "n": 3,
+        "p50_ms": 104.474,
+        "p95_ms": 123.276,
+        "max_ms": 123.276,
+        "mean_ms": 110.493
+      },
+      "protected_read_allow": {
+        "n": 3,
+        "p50_ms": 111.635,
+        "p95_ms": 112.709,
+        "max_ms": 112.709,
+        "mean_ms": 110.88
+      },
+      "protected_read_invalid_key": {
+        "n": 3,
+        "p50_ms": 104.061,
+        "p95_ms": 106.147,
+        "max_ms": 106.147,
+        "mean_ms": 104.498
+      },
+      "setup_1mib": {
+        "n": 3,
+        "p50_ms": 156.114,
+        "p95_ms": 156.645,
+        "max_ms": 156.645,
+        "mean_ms": 149.41
+      },
+      "setup_near_4mib_cap": {
+        "n": 3,
+        "p50_ms": 250.092,
+        "p95_ms": 268.286,
+        "max_ms": 268.286,
+        "mean_ms": 255.98
+      }
+    },
+    "crypto_in_process": {
+      "ml_kem_768_keygen": {
+        "n": 12,
+        "p50_ms": 0.101,
+        "p95_ms": 0.234,
+        "max_ms": 0.234,
+        "mean_ms": 0.114
+      },
+      "ml_kem_768_encapsulate": {
+        "n": 12,
+        "p50_ms": 0.082,
+        "p95_ms": 0.128,
+        "max_ms": 0.128,
+        "mean_ms": 0.087
+      },
+      "ml_kem_768_decapsulate": {
+        "n": 12,
+        "p50_ms": 0.061,
+        "p95_ms": 0.246,
+        "max_ms": 0.246,
+        "mean_ms": 0.079
+      },
+      "ml_dsa_65_keygen": {
+        "n": 12,
+        "p50_ms": 0.269,
+        "p95_ms": 0.329,
+        "max_ms": 0.329,
+        "mean_ms": 0.278
+      },
+      "ml_dsa_65_sign": {
+        "n": 12,
+        "p50_ms": 1.184,
+        "p95_ms": 1.932,
+        "max_ms": 1.932,
+        "mean_ms": 1.083
+      },
+      "ml_dsa_65_verify": {
+        "n": 12,
+        "p50_ms": 0.241,
+        "p95_ms": 0.413,
+        "max_ms": 0.413,
+        "mean_ms": 0.257
+      },
+      "aes_256_gcm_seal_1kib": {
+        "n": 12,
+        "p50_ms": 0.025,
+        "p95_ms": 0.086,
+        "max_ms": 0.086,
+        "mean_ms": 0.031
+      },
+      "aes_256_gcm_open_1kib": {
+        "n": 12,
+        "p50_ms": 0.021,
+        "p95_ms": 0.204,
+        "max_ms": 0.204,
+        "mean_ms": 0.038
+      },
+      "aes_256_gcm_seal_64kib": {
+        "n": 12,
+        "p50_ms": 0.088,
+        "p95_ms": 0.102,
+        "max_ms": 0.102,
+        "mean_ms": 0.086
+      },
+      "aes_256_gcm_open_64kib": {
+        "n": 12,
+        "p50_ms": 0.084,
+        "p95_ms": 2.608,
+        "max_ms": 2.608,
+        "mean_ms": 0.307
+      },
+      "aes_256_gcm_seal_256kib": {
+        "n": 12,
+        "p50_ms": 0.212,
+        "p95_ms": 0.329,
+        "max_ms": 0.329,
+        "mean_ms": 0.224
+      },
+      "aes_256_gcm_open_256kib": {
+        "n": 12,
+        "p50_ms": 0.208,
+        "p95_ms": 0.251,
+        "max_ms": 0.251,
+        "mean_ms": 0.213
+      },
+      "hkdf_sha256_32b": {
+        "n": 12,
+        "p50_ms": 0.025,
+        "p95_ms": 0.5,
+        "max_ms": 0.5,
+        "mean_ms": 0.068
+      },
+      "hmac_sha256_1kib": {
+        "n": 12,
+        "p50_ms": 0.008,
+        "p95_ms": 0.275,
+        "max_ms": 0.275,
+        "mean_ms": 0.034
+      },
+      "kem_wrap_dek": {
+        "n": 12,
+        "p50_ms": 0.136,
+        "p95_ms": 0.269,
+        "max_ms": 0.269,
+        "mean_ms": 0.167
+      },
+      "kem_unwrap_dek": {
+        "n": 12,
+        "p50_ms": 0.14,
+        "p95_ms": 0.392,
+        "max_ms": 0.392,
+        "mean_ms": 0.161
+      }
+    },
+    "storage_in_process": {
+      "audit_append_tx": {
+        "n": 12,
+        "p50_ms": 0.699,
+        "p95_ms": 1.274,
+        "max_ms": 1.274,
+        "mean_ms": 0.797
+      },
+      "verify_chain_1000": {
+        "n": 3,
+        "p50_ms": 23.841,
+        "p95_ms": 28.39,
+        "max_ms": 28.39,
+        "mean_ms": 25.279
+      }
+    },
+    "detector_in_process": {
+      "synthetic_events_count": 1358,
+      "detect_synthetic_dataset": {
+        "n": 3,
+        "p50_ms": 10.626,
+        "p95_ms": 16.998,
+        "max_ms": 16.998,
+        "mean_ms": 12.118
+      },
+      "p50_events_per_sec": 127800,
+      "detect_practice_22": {
+        "n": 3,
+        "p50_ms": 0.234,
+        "p95_ms": 0.544,
+        "max_ms": 0.544,
+        "mean_ms": 0.31
+      }
+    },
+    "messaging_in_process": {
+      "handshake_m1_m3": {
+        "n": 12,
+        "p50_ms": 125.356,
+        "p95_ms": 159.916,
+        "max_ms": 159.916,
+        "mean_ms": 133.516
+      },
+      "record_seal_16kib": {
+        "n": 12,
+        "p50_ms": 16.758,
+        "p95_ms": 17.898,
+        "max_ms": 17.898,
+        "mean_ms": 16.772
+      },
+      "record_open_16kib": {
+        "n": 12,
+        "p50_ms": 22.28,
+        "p95_ms": 43.17,
+        "max_ms": 43.17,
+        "mean_ms": 26.064
+      }
+    },
+    "cluster_round2": null,
+    "sizes_bytes": {
+      "ml_kem_768_pk_raw": 1184,
+      "ml_kem_768_sk_pkcs8": 2498,
+      "ml_kem_768_ct": 1088,
+      "ml_kem_768_ss": 32,
+      "ml_dsa_65_pk_raw": 1952,
+      "ml_dsa_65_pk_spki": 1974,
+      "ml_dsa_65_sk_pkcs8": 4098,
+      "ml_dsa_65_sig": 3309,
+      "aes_256_gcm_nonce": 12,
+      "aes_256_gcm_tag": 16,
+      "device_dek_envelope_json": 1565,
+      "signed_policy_snapshot_3_devices": 4238,
+      "backup_bundle_3_devices_1_file": 317273,
+      "audit_db_bytes_per_event_at_1000": 229
+    }
+  },
+  "limits": [
+    "Single-host measurements; cluster timings use loopback HTTP on 127.0.0.1 and exclude real WAN latency.",
+    "Round 1 adapter timings spawn a fresh Node.js process per request (matching the organizer worker), so Node startup dominates.",
+    "Numbers depend on host CPU and filesystem; the local x86-64 replica is a stand-in, not the organizer hardware."
+  ]
+}

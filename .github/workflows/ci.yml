@@ -54,6 +54,12 @@ jobs:
     timeout-minutes: 25
     env:
       TOOLKIT_DIR: toolkit
+    defaults:
+      run:
+        # Explicit `shell: bash` makes GitHub run `bash --noprofile --norc -eo pipefail {0}`.
+        # The implicit default is `bash -e {0}` WITHOUT pipefail, which let `npm test | tee`
+        # report tee's exit status and hide failing tests.
+        shell: bash
     steps:
       - uses: actions/checkout@v4
 
@@ -68,7 +74,7 @@ jobs:
         with:
           node-version: 24.11.1
 
-      # GitHub's default bash runs with -eo pipefail, so `| tee` keeps the step's exit status.
+      # pipefail (job default above) keeps the step's exit status through `| tee`.
       - name: Evidence folder
         run: mkdir -p evidence-replica && echo "commit ${GITHUB_SHA} runner ${RUNNER_ARCH} $(date -u +%FT%TZ)" > evidence-replica/run.txt
 

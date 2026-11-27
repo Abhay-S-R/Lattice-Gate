@@ -1,7 +1,6 @@
 .git
 .superpowers
 node_modules
-evidence
 **/*.db
 **/*.db-wal
 **/*.db-shm

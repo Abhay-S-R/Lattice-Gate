@@ -66,9 +66,7 @@ async function until(fn, ms) {
     await sleep(50);
   }
 }
-function pidAlive(pid) {
-  try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; }
-}
+const { pidAlive } = require('../core/proc.cjs');
 
 /** Build the scenario through the real CLI (each command in its own process, like an operator). */
 function setup(home, env, marker) {

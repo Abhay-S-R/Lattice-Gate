@@ -88,10 +88,7 @@ function removePid(/** @type {number | null} */ onlyIfPid = null) {
   try { fs.unlinkSync(pidFile()); } catch { /* already gone */ }
 }
 
-function alive(/** @type {number} */ pid) {
-  if (!(pid > 0)) return false;
-  try { process.kill(pid, 0); return true; } catch (e) { return /** @type {NodeJS.ErrnoException} */ (e).code === 'EPERM'; }
-}
+const alive = require('../core/proc.cjs').pidAlive;
 
 /** GET /health on loopback; resolves to the parsed body or null. */
 function probe(/** @type {number} */ port, timeoutMs = 1500) {
